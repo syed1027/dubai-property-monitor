@@ -6,6 +6,8 @@
 <title>Dubai Property Monitor — Real Estate Intelligence</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root {
   --g: #00a86b;
@@ -469,6 +471,204 @@ hr.divider { border: none; border-top: 1px solid var(--bd2); margin: 8px 12px; }
   font-size: 10px; color: var(--t2);
 }
 
+
+/* ── MAP SECTION ─────────────────── */
+#sec-map { padding: 0 !important; }
+#map-wrapper { position: relative; height: calc(100vh - 84px - 32px); min-height: 500px; }
+#leaflet-map { height: 100%; width: 100%; background: #06090f; }
+.leaflet-container { background: #06090f; font-family: 'IBM Plex Sans', sans-serif; }
+
+.map-layers-panel {
+  position: absolute; top: 12px; left: 12px; z-index: 800;
+  background: rgba(6,11,8,0.94);
+  border: 1.5px solid var(--gold);
+  border-radius: 8px; padding: 12px 14px; min-width: 196px;
+  backdrop-filter: blur(10px);
+}
+.map-layers-title {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700;
+  color: var(--gold); text-transform: uppercase; letter-spacing: 0.12em;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.map-layer-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 0; cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: all 0.12s;
+}
+.map-layer-item:last-child { border-bottom: none; }
+.map-layer-item:hover .map-layer-label { color: #fff; }
+.map-layer-check {
+  width: 15px; height: 15px; border-radius: 3px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; flex-shrink: 0; transition: all 0.15s;
+}
+.map-layer-item.on .map-layer-check { background: var(--accent); border-color: var(--accent); color: #000; }
+.map-layer-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--t2); transition: color 0.12s;
+}
+.map-layer-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-left: auto;
+}
+.map-time-filter {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 800;
+  display: flex; gap: 4px;
+  background: rgba(6,11,8,0.94); border: 1px solid var(--bd);
+  border-radius: 6px; padding: 4px;
+}
+.mtf-btn {
+  padding: 4px 10px; border-radius: 4px; border: none;
+  background: transparent; color: var(--t2);
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700;
+  cursor: pointer; letter-spacing: 0.05em; transition: all 0.15s;
+}
+.mtf-btn.active { background: var(--accent); color: #000; }
+.mtf-btn:hover:not(.active) { background: var(--accentDim); color: var(--t); }
+.map-zoom-ctrl {
+  position: absolute; top: 12px; right: 12px; z-index: 800;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.mzb {
+  width: 32px; height: 32px; background: rgba(6,11,8,0.94); border: 1px solid var(--bd);
+  border-radius: 5px; color: var(--t2); font-size: 16px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.mzb:hover { border-color: var(--accent); color: var(--accent); }
+.map-legend {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 800;
+  background: rgba(6,11,8,0.94); border: 1.5px solid var(--gold);
+  border-radius: 6px; padding: 7px 14px;
+  display: flex; align-items: center; gap: 14px; white-space: nowrap;
+}
+.mleg-item { display: flex; align-items: center; gap: 5px; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 700; color: var(--t2); text-transform: uppercase; letter-spacing: 0.07em; }
+.mleg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.mleg-tri { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; flex-shrink: 0; }
+.mleg-sq { width: 9px; height: 9px; flex-shrink: 0; }
+.leaflet-popup-content-wrapper {
+  background: rgba(6,11,8,0.97) !important; border: 1px solid var(--bd) !important;
+  border-radius: 8px !important; padding: 0 !important; color: var(--t) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+}
+.leaflet-popup-tip-container { display: none !important; }
+.leaflet-popup-content { margin: 0 !important; }
+.mpop { padding: 12px 14px; min-width: 200px; }
+.mpop-area { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--t2); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3px; }
+.mpop-name { font-size: 13px; font-weight: 700; color: var(--t); margin-bottom: 6px; }
+.mpop-price { font-family: 'IBM Plex Mono', monospace; font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+.mpop-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--bd2); font-size: 11px; }
+.mpop-row:last-child { border-bottom: none; }
+.mpop-key { color: var(--t2); }
+.mpop-val { color: var(--t); font-weight: 500; }
+.mpop-badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; margin-right: 4px; }
+
+/* ── CMD PALETTE ─────────────────── */
+#cmd-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(0,0,0,0.72); backdrop-filter: blur(8px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 72px;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+#cmd-overlay.open { opacity: 1; pointer-events: all; }
+.cmd-box {
+  width: 560px; max-width: 95vw;
+  background: var(--s2); border: 1px solid var(--bd);
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+}
+.cmd-input-wrap {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; border-bottom: 1px solid var(--bd);
+}
+.cmd-icon { font-size: 16px; color: var(--t2); }
+.cmd-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: var(--t);
+}
+.cmd-input::placeholder { color: var(--t3); }
+.cmd-esc {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--t3);
+  background: var(--s3); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--bd);
+}
+.cmd-results { max-height: 420px; overflow-y: auto; }
+.cmd-section-label {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700;
+  color: var(--t3); text-transform: uppercase; letter-spacing: 0.12em;
+  padding: 10px 16px 4px;
+}
+.cmd-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 16px; cursor: pointer; transition: background 0.1s;
+}
+.cmd-item:hover, .cmd-item.selected { background: var(--accentDim); }
+.cmd-item-icon { font-size: 16px; width: 24px; text-align: center; flex-shrink: 0; }
+.cmd-item-text { flex: 1; }
+.cmd-item-title { font-size: 13px; font-weight: 500; color: var(--t); }
+.cmd-item-sub { font-size: 11px; color: var(--t2); margin-top: 1px; }
+.cmd-item-tag {
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700;
+  padding: 2px 6px; border-radius: 3px;
+  background: var(--accentDim); color: var(--accent);
+}
+.cmd-footer {
+  padding: 8px 16px; border-top: 1px solid var(--bd2);
+  display: flex; gap: 12px; font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; color: var(--t3);
+}
+.cmd-footer kbd {
+  background: var(--s3); border: 1px solid var(--bd);
+  padding: 1px 5px; border-radius: 3px; color: var(--t2); margin-right: 3px;
+}
+
+/* ── COACH MARKS ─────────────────── */
+.coach-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; border-radius: 50%;
+  background: var(--s3); border: 1px solid var(--bd);
+  color: var(--t2); font-size: 9.5px; font-weight: 700;
+  cursor: pointer; vertical-align: middle; margin-left: 5px;
+  transition: all 0.15s; flex-shrink: 0; position: relative;
+}
+.coach-btn:hover { background: var(--accentDim); border-color: var(--accent); color: var(--accent); }
+.coach-tooltip {
+  position: fixed; z-index: 9999;
+  background: var(--s1); border: 1.5px solid var(--accent);
+  border-radius: 10px; padding: 14px 16px; max-width: 290px; min-width: 220px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+  pointer-events: none; opacity: 0;
+  transition: opacity 0.18s ease;
+  display: block !important;
+}
+.coach-tooltip.visible { opacity: 1; pointer-events: all; }
+.ct-title { font-size: 12px; font-weight: 700; color: var(--t); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+.ct-body { font-size: 11.5px; color: var(--t2); line-height: 1.55; }
+.ct-close {
+  margin-top: 10px; padding: 4px 10px; border-radius: 5px;
+  background: var(--accentDim); border: 1px solid var(--accent);
+  color: var(--accent); font-size: 10px; font-weight: 600; cursor: pointer;
+  display: inline-block;
+}
+.coach-arrow { font-size: 14px; color: var(--accent); }
+
+/* ── CMD KEYBOARD SHORTCUT IN HDR ── */
+.hdr-cmd-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 6px;
+  border: 1px solid var(--bd); background: var(--s2);
+  color: var(--t2); cursor: pointer; font-size: 11px; font-family: inherit;
+  transition: all 0.15s;
+}
+.hdr-cmd-btn:hover { border-color: var(--accent); color: var(--accent); }
+.hdr-cmd-btn kbd {
+  background: var(--s3); border: 1px solid var(--bd);
+  padding: 1px 5px; border-radius: 3px; font-size: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
 /* ── RESPONSIVE ─────────────────── */
 @media (max-width: 768px) {
   .stat-grid { grid-template-columns: repeat(2,1fr); }
@@ -499,6 +699,7 @@ hr.divider { border: none; border-top: 1px solid var(--bd2); margin: 8px 12px; }
     <button class="mode-pill" onclick="setMode('agent')">🤝 Agent</button>
   </div>
 
+  <button class="hdr-cmd-btn" onclick="openCmd()">🔍 Search <kbd>⌘K</kbd></button>
   <button class="hdr-btn" onclick="toggleTheme()" id="theme-btn">🌙 Dark</button>
   <button class="hdr-btn" onclick="openModal('alert-modal')">🔔 Alerts</button>
   <button class="hdr-btn btn-primary" style="border:none" onclick="openModal('lead-modal')">Get Full Access</button>
@@ -570,6 +771,7 @@ hr.divider { border: none; border-top: 1px solid var(--bd2); margin: 8px 12px; }
       <div class="nav-item" onclick="showSection('roi')"><span class="nav-icon">💰</span> ROI Calculator</div>
       <div class="nav-item" onclick="showSection('compare')"><span class="nav-icon">⚖️</span> Area Compare</div>
       <div class="nav-item" onclick="showSection('alerts')"><span class="nav-icon">🔔</span> Price Alerts</div>
+      <div class="nav-item" onclick="showSection('map')"><span class="nav-icon">🗺️</span> GCC Map <span class="nav-badge" style="background:var(--blue)">NEW</span></div>
     </div>
     <hr class="divider"/>
     <div class="sidebar-section">
@@ -596,7 +798,7 @@ hr.divider { border: none; border-top: 1px solid var(--bd2); margin: 8px 12px; }
       <!-- KPI Cards -->
       <div class="stat-grid" id="kpi-grid">
         <div class="stat-card">
-          <div class="stat-label">Total Transactions</div>
+          <div class="stat-label">Total Transactions <span class="coach-btn" onclick="showCoach(this,'Total Transactions','Number of DLD-registered property transactions in 2025 YTD. Includes sales, mortgages, and gift transfers across all property types in Dubai.')">?</span></div>
           <div class="stat-val" id="kpi-total">—</div>
           <div class="stat-sub up" id="kpi-total-chg">Loading...</div>
         </div>
@@ -611,7 +813,7 @@ hr.divider { border: none; border-top: 1px solid var(--bd2); margin: 8px 12px; }
           <div class="stat-sub" id="kpi-psf-chg">Loading...</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Avg Rental Yield</div>
+          <div class="stat-label">Avg Rental Yield <span class="coach-btn" onclick="showCoach(this,'Gross Rental Yield','Calculated as: (Annual Rent / Purchase Price) × 100. Dubai average is 6.8% — significantly higher than London (3.5%), Singapore (4%), or New York (4.2%).')">?</span></div>
           <div class="stat-val" id="kpi-yield">6.8%</div>
           <div class="stat-sub up">▲ vs 6.2% last year</div>
         </div>
@@ -631,7 +833,7 @@ hr.divider { border: none; border-top: 1px solid var(--bd2); margin: 8px 12px; }
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div class="card">
           <div class="card-hdr">
-            <div class="card-title">📈 Monthly Transactions (2024–2025)</div>
+            <div class="card-title">📈 Monthly Transactions (2024–2025) <span class="coach-btn" onclick="showCoach(this,'Monthly Transactions Chart','Compares transaction volumes month-by-month for 2024 vs 2025. Blue bars show current year — green bars show 2024 baseline. Spikes indicate seasonal peaks.')">?</span></div>
             <div class="card-meta" id="chart1-src">DLD via Dubai Pulse</div>
           </div>
           <div class="card-body">
@@ -652,7 +854,7 @@ hr.divider { border: none; border-top: 1px solid var(--bd2); margin: 8px 12px; }
       <!-- Area price index -->
       <div class="card">
         <div class="card-hdr">
-          <div class="card-title">🏙️ Area Price Index — Price per sqft (AED)</div>
+          <div class="card-title">🏙️ Area Price Index — Price per sqft (AED) <span class="coach-btn" onclick="showCoach(this,'Area Price Heatmap','Color intensity = price level. Red = luxury (AED 3K+/sqft), green = mid-market, blue = affordable. Click any area tile to explore detailed stats and comparable transactions.')">?</span></div>
           <div class="card-meta" id="area-src">Source: DLD Transactions</div>
         </div>
         <div class="card-body">
@@ -665,7 +867,7 @@ hr.divider { border: none; border-top: 1px solid var(--bd2); margin: 8px 12px; }
       <!-- Recent big transactions -->
       <div class="card">
         <div class="card-hdr">
-          <div class="card-title">⚡ Recent High-Value Transactions</div>
+          <div class="card-title">⚡ Recent High-Value Transactions <span class="coach-btn" onclick="showCoach(this,'Live Transaction Feed','Direct from Dubai Land Department (DLD) via Dubai Pulse open data. Shows the most recent registered property transactions. Updates every 15 minutes when live data is available.')">?</span></div>
           <div class="card-meta" id="txn-refresh-time">—</div>
         </div>
         <div class="card-body" style="padding:0">
@@ -709,6 +911,7 @@ hr.divider { border: none; border-top: 1px solid var(--bd2); margin: 8px 12px; }
         </div>
       </div>
 
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="font-size:12px;font-weight:600;color:var(--t2)">Filter by type:</span><span class="coach-btn" onclick="showCoach(this,'Transaction Filters','Filter DLD transactions by type: Sales (direct purchases), Mortgages (bank-financed), Gifts (family/company transfers), or by property category. Multiple filters can reveal market depth and investor vs. end-user ratio.')">?</span></div>
       <div class="filter-row" id="txn-filters">
         <button class="filter-btn active" onclick="filterTxn('all',this)">All</button>
         <button class="filter-btn" onclick="filterTxn('Sales',this)">Sales</button>
@@ -949,7 +1152,7 @@ hr.divider { border: none; border-top: 1px solid var(--bd2); margin: 8px 12px; }
       <div class="display" style="font-size:28px">ROI Calculator</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div class="card">
-          <div class="card-hdr"><div class="card-title">Investment Parameters</div></div>
+          <div class="card-hdr"><div class="card-title">Investment Parameters <span class="coach-btn" onclick="showCoach(this,'ROI Calculator','Enter your purchase price, expected annual rent, service charges, and appreciation rate. The calculator projects gross yield, net yield, and total 5-year return including capital appreciation. Use 8% appreciation for Dubai average.')">?</span></div></div>
           <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
             <div><label class="form-label">Purchase Price (AED)</label>
             <input type="number" class="form-input" id="roi-price" value="1500000" oninput="calcROI()"/></div>
@@ -1025,6 +1228,93 @@ hr.divider { border: none; border-top: 1px solid var(--bd2); margin: 8px 12px; }
         </div>
       </div>
       <div id="alerts-list"></div>
+    </div>
+
+
+    <!-- ═══════ MAP SECTION ═══════ -->
+    <div class="section hidden" id="sec-map" style="padding:0;margin:0">
+      <div id="map-wrapper">
+        <!-- Leaflet Map -->
+        <div id="leaflet-map"></div>
+
+        <!-- Layer Panel -->
+        <div class="map-layers-panel">
+          <div class="map-layers-title">
+            <span>LAYERS</span>
+            <span class="coach-btn" style="border-color:rgba(244,169,64,0.4);color:var(--gold)" onclick="showCoach(this,'Map Layers','Toggle property layers on the map. Each layer highlights areas matching that criteria using color-coded markers. Enable multiple layers to find areas that satisfy several investment criteria simultaneously.')">?</span>
+          </div>
+          <div class="map-layer-item on" data-layer="community" onclick="toggleMapLayer(this)">
+            <div class="map-layer-check">✓</div>
+            <div class="map-layer-label" style="color:#e74c3c">🏘 Villa Community</div>
+            <div class="map-layer-dot" style="background:#e74c3c"></div>
+          </div>
+          <div class="map-layer-item" data-layer="affordable" onclick="toggleMapLayer(this)">
+            <div class="map-layer-check"></div>
+            <div class="map-layer-label" style="color:#f1c40f">💰 Affordable Rents</div>
+            <div class="map-layer-dot" style="background:#f1c40f"></div>
+          </div>
+          <div class="map-layer-item on" data-layer="roi" onclick="toggleMapLayer(this)">
+            <div class="map-layer-check">✓</div>
+            <div class="map-layer-label" style="color:#f39c12">📈 High ROI</div>
+            <div class="map-layer-dot" style="background:#f39c12"></div>
+          </div>
+          <div class="map-layer-item" data-layer="steady" onclick="toggleMapLayer(this)">
+            <div class="map-layer-check"></div>
+            <div class="map-layer-label" style="color:#2ecc71">📊 Steady Growth</div>
+            <div class="map-layer-dot" style="background:#2ecc71"></div>
+          </div>
+          <div class="map-layer-item on" data-layer="waterfront" onclick="toggleMapLayer(this)">
+            <div class="map-layer-check">✓</div>
+            <div class="map-layer-label" style="color:#3498db">⚓ Water Front</div>
+            <div class="map-layer-dot" style="background:#3498db; border-radius:2px"></div>
+          </div>
+          <div class="map-layer-item on" data-layer="newprojects" onclick="toggleMapLayer(this)">
+            <div class="map-layer-check">✓</div>
+            <div class="map-layer-label" style="color:#e67e22">🏗 New Projects</div>
+            <div class="map-layer-dot" style="background:#e67e22"></div>
+          </div>
+          <div class="map-layer-item" data-layer="demand" onclick="toggleMapLayer(this)">
+            <div class="map-layer-check"></div>
+            <div class="map-layer-label" style="color:#9b59b6">💎 High Tenant Demand</div>
+            <div class="map-layer-dot" style="background:#9b59b6"></div>
+          </div>
+          <div class="map-layer-item" data-layer="gcc" onclick="toggleMapLayer(this)">
+            <div class="map-layer-check"></div>
+            <div class="map-layer-label" style="color:#1abc9c">🌍 GCC Cities</div>
+            <div class="map-layer-dot" style="background:#1abc9c"></div>
+          </div>
+        </div>
+
+        <!-- Time filter -->
+        <div class="map-time-filter">
+          <button class="mtf-btn active" onclick="setMapTime(this,'1h')">1h</button>
+          <button class="mtf-btn" onclick="setMapTime(this,'6h')">6h</button>
+          <button class="mtf-btn" onclick="setMapTime(this,'24h')">24h</button>
+          <button class="mtf-btn" onclick="setMapTime(this,'48h')">48h</button>
+          <button class="mtf-btn" onclick="setMapTime(this,'7d')">7d</button>
+          <button class="mtf-btn" onclick="setMapTime(this,'all')">All</button>
+        </div>
+
+        <!-- Zoom controls -->
+        <div class="map-zoom-ctrl">
+          <button class="mzb" onclick="dpmMap&&dpmMap.zoomIn()">+</button>
+          <button class="mzb" onclick="dpmMap&&dpmMap.zoomOut()">−</button>
+          <button class="mzb" title="Reset view" onclick="resetMapView()">⌂</button>
+        </div>
+
+        <!-- Legend -->
+        <div class="map-legend">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:0.1em">LEGEND</span>
+          <div class="mleg-item"><div class="mleg-dot" style="background:#e74c3c"></div> Community</div>
+          <div class="mleg-item"><div class="mleg-dot" style="background:#e67e22"></div> New Projects</div>
+          <div class="mleg-item"><div class="mleg-dot" style="background:#f39c12"></div> High ROI</div>
+          <div class="mleg-item"><div class="mleg-dot" style="background:#f1c40f"></div> Affordable</div>
+          <div class="mleg-item" style="border-top:2px solid #f1c40f;padding-top:1px;border-left:5px solid transparent;border-right:5px solid transparent;display:inline-flex">
+            <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid #f39c12;margin-right:5px"></div> Villas
+          </div>
+          <div class="mleg-item"><div class="mleg-sq" style="background:#3498db"></div> Water Front</div>
+        </div>
+      </div>
     </div>
 
   </div><!-- end content -->
@@ -1942,14 +2232,13 @@ async function tryLiveData() {
   }
 }
 
+
 // ── SECTION NAVIGATION ─────────────────────────────────────
 function showSection(id) {
   document.querySelectorAll('.section').forEach(s=>s.classList.add('hidden'));
-  document.getElementById('sec-'+id).classList.remove('hidden');
+  document.getElementById('sec-'+id)?.classList.remove('hidden');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   event?.target?.closest('.nav-item')?.classList.add('active');
-
-  // Lazy init charts
   if(id==='market') { setTimeout(initMarketCharts, 100); renderRERA(); }
   if(id==='areas') renderAreaDetail();
   if(id==='offplan') renderOffplan();
@@ -1960,6 +2249,7 @@ function showSection(id) {
   if(id==='compare') renderCompare();
   if(id==='alerts') renderAlerts();
   if(id==='transactions') renderFullTxnTable();
+  if(id==='map') { setTimeout(()=>{ if(!mapInitialized)initMap(); else if(dpmMap)dpmMap.invalidateSize(); }, 80); }
 }
 
 // ── MODAL ──────────────────────────────────────────────────
@@ -1994,7 +2284,6 @@ function toggleTheme() {
   dark = !dark;
   document.documentElement.setAttribute('data-theme', dark?'dark':'light');
   document.getElementById('theme-btn').textContent = dark?'🌙 Dark':'☀️ Light';
-  // Re-init charts for new colors
   setTimeout(initCharts, 100);
 }
 
@@ -2008,11 +2297,10 @@ function setMode(mode) {
 // ── FILTER AREAS ───────────────────────────────────────────
 function filterAreas(q) { renderAreaDetail(q); }
 
-// ── EXPORT ─────────────────────────────────────────────────
+// ── EXPORT CSV ─────────────────────────────────────────────
 function exportCSV() {
   const headers = ['Date','Area','Type','SubType','Price AED','Size sqm','Size sqft','AED/sqft','Project'];
-  const rows = ALL_TRANSACTIONS.map(t=>[
-    t.date, t.area, t.type, t.propSubType, t.price, t.size,
+  const rows = ALL_TRANSACTIONS.map(t=>[    t.date, t.area, t.type, t.propSubType, t.price, t.size,
     t.size?(t.size*10.764).toFixed(0):'',
     t.size?(t.price/(t.size*10.764)).toFixed(0):'',
     t.project||''
@@ -2037,7 +2325,7 @@ function refreshTransactions() {
   });
 }
 
-// ── CURRENCY (free API) ────────────────────────────────────
+// ── CURRENCY ───────────────────────────────────────────────
 async function fetchCurrency() {
   try {
     const res = await fetch('https://api.exchangerate-api.com/v4/latest/AED');
@@ -2049,37 +2337,341 @@ async function fetchCurrency() {
       document.getElementById('fx-eur').textContent = (1/data.rates.EUR).toFixed(4);
       document.getElementById('fx-inr').textContent = (1/data.rates.INR).toFixed(4);
     }
-  } catch(e) {
-    // defaults already shown
-  }
+  } catch(e) { /* keep defaults */ }
 }
 
 // ── BOOT ──────────────────────────────────────────────────
 async function init() {
-  // 1. Render static content immediately
   renderAreaGrid();
   updateKPIs();
   renderMainTxnTable(ALL_TRANSACTIONS);
   renderTopAreas();
   renderRPOffplan();
   renderAlerts();
-
-  // 2. Init charts
   setTimeout(initCharts, 200);
-
-  // 3. Start live feed
   updateLiveFeed();
   setInterval(updateLiveFeed, 4000);
-
-  // 4. Try live data async
   setTimeout(tryLiveData, 1000);
-
-  // 5. Currency
   fetchCurrency();
   setInterval(fetchCurrency, 300000);
 }
 
+// ── COACH MARKS (old stub — replaced by showCoach below) ───
+
+const GCC_MARKERS = [
+  // Dubai
+  {name:'Palm Jumeirah',lat:25.112,lng:55.139,country:'UAE',city:'Dubai',type:'community',psf:'AED 3,890',yield:'4.8%',chg:'+5.2%',status:'Ready',layers:['all','community'],cat:'luxury'},
+  {name:'Downtown Dubai',lat:25.197,lng:55.274,country:'UAE',city:'Dubai',type:'community',psf:'AED 2,610',yield:'5.2%',chg:'+3.4%',status:'Ready',layers:['all','community']},
+  {name:'Dubai Marina',lat:25.076,lng:55.133,country:'UAE',city:'Dubai',type:'community',psf:'AED 1,842',yield:'6.4%',chg:'+2.1%',status:'Ready',layers:['all','community']},
+  {name:'Business Bay',lat:25.185,lng:55.264,country:'UAE',city:'Dubai',type:'community',psf:'AED 1,640',yield:'6.8%',chg:'+1.8%',status:'Ready',layers:['all','community','roi']},
+  {name:'JVC',lat:25.056,lng:55.208,country:'UAE',city:'Dubai',type:'community',psf:'AED 980',yield:'7.8%',chg:'-0.4%',status:'Ready',layers:['all','community','roi']},
+  {name:'Dubai Hills Estate',lat:25.105,lng:55.229,country:'UAE',city:'Dubai',type:'community',psf:'AED 1,890',yield:'5.6%',chg:'+3.2%',status:'Ready',layers:['all','community']},
+  {name:'MBR City',lat:25.167,lng:55.309,country:'UAE',city:'Dubai',type:'community',psf:'AED 1,720',yield:'7.1%',chg:'+6.4%',status:'Ready',layers:['all','community','roi']},
+  {name:'DIFC',lat:25.213,lng:55.282,country:'UAE',city:'Dubai',type:'community',psf:'AED 2,380',yield:'5.8%',chg:'+1.2%',status:'Ready',layers:['all','community']},
+  {name:'Meydan',lat:25.162,lng:55.311,country:'UAE',city:'Dubai',type:'community',psf:'AED 1,180',yield:'7.1%',chg:'+6.4%',status:'Ready',layers:['all','community','roi']},
+  {name:'Arabian Ranches',lat:25.042,lng:55.270,country:'UAE',city:'Dubai',type:'community',psf:'AED 1,250',yield:'5.4%',chg:'+2.8%',status:'Ready',layers:['all','community']},
+  {name:'International City',lat:25.172,lng:55.414,country:'UAE',city:'Dubai',type:'community',psf:'AED 480',yield:'9.4%',chg:'+3.1%',status:'Ready',layers:['all','community','roi']},
+  // Off-plan
+  {name:'Creek Waters 2',lat:25.221,lng:55.327,country:'UAE',city:'Dubai',type:'offplan',psf:'AED 1,950',yield:'8.2%',chg:'New',status:'Q2 2027 · 78% sold',layers:['all','newprojects']},
+  {name:'Sobha Seahaven B',lat:25.084,lng:55.145,country:'UAE',city:'Dubai',type:'offplan',psf:'AED 2,400',yield:'7.8%',chg:'New',status:'Q1 2027 · 89% sold',layers:['all','newprojects']},
+  {name:'Binghatti Skyrise',lat:25.183,lng:55.267,country:'UAE',city:'Dubai',type:'offplan',psf:'AED 1,200',yield:'9.1%',chg:'New',status:'Q3 2026 · 62% sold',layers:['all','newprojects','roi']},
+  {name:'DAMAC Lagoons Ph4',lat:24.978,lng:55.237,country:'UAE',city:'Dubai',type:'offplan',psf:'AED 900',yield:'7.2%',chg:'New',status:'Q4 2027 · 55% sold',layers:['all','newprojects','roi']},
+  // Abu Dhabi
+  {name:'Saadiyat Island',lat:24.543,lng:54.427,country:'UAE',city:'Abu Dhabi',type:'community',psf:'AED 2,100',yield:'5.1%',chg:'+4.2%',status:'Ready',layers:['all','community']},
+  {name:'Yas Island',lat:24.488,lng:54.610,country:'UAE',city:'Abu Dhabi',type:'community',psf:'AED 1,480',yield:'6.9%',chg:'+3.8%',status:'Ready',layers:['all','community','roi']},
+  {name:'Al Reem Island',lat:24.503,lng:54.408,country:'UAE',city:'Abu Dhabi',type:'community',psf:'AED 1,120',yield:'7.2%',chg:'+2.1%',status:'Ready',layers:['all','community','roi']},
+  // Sharjah
+  {name:'Aljada — Sharjah',lat:25.339,lng:55.506,country:'UAE',city:'Sharjah',type:'offplan',psf:'AED 620',yield:'8.8%',chg:'New',status:'Q4 2026',layers:['all','newprojects','roi']},
+  {name:'Maryam Island',lat:25.381,lng:55.429,country:'UAE',city:'Sharjah',type:'community',psf:'AED 590',yield:'8.5%',chg:'+5.1%',status:'Ready',layers:['all','community','roi']},
+  // Saudi Arabia
+  {name:'Riyadh — NEOM Gateway',lat:24.688,lng:46.722,country:'SAU',city:'Riyadh',type:'gcc',psf:'SAR 4,200',yield:'5.8%',chg:'+12%',status:'Freehold zones open',layers:['all','gcc']},
+  {name:'Jeddah — North Obhor',lat:21.613,lng:39.150,country:'SAU',city:'Jeddah',type:'gcc',psf:'SAR 3,100',yield:'6.2%',chg:'+8.4%',status:'Expat ownership 2024',layers:['all','gcc']},
+  {name:'NEOM / The Line',lat:28.118,lng:35.255,country:'SAU',city:'Tabuk',type:'offplan',psf:'SAR N/A',yield:'TBD',chg:'Mega-project',status:'Under construction',layers:['all','gcc','newprojects']},
+  // Qatar
+  {name:'Lusail City',lat:25.418,lng:51.490,country:'QAT',city:'Doha',type:'community',psf:'QAR 5,800',yield:'6.4%',chg:'+7.2%',status:'Freehold zone',layers:['all','gcc','community']},
+  {name:'The Pearl Qatar',lat:25.369,lng:51.551,country:'QAT',city:'Doha',type:'community',psf:'QAR 7,200',yield:'5.2%',chg:'+4.1%',status:'Ready',layers:['all','gcc','community']},
+  // Kuwait
+  {name:'Kuwait City — Salmiya',lat:29.341,lng:48.078,country:'KWT',city:'Kuwait City',type:'gcc',psf:'KWD 320',yield:'5.9%',chg:'+2.8%',status:'GCC nationals',layers:['all','gcc']},
+  // Bahrain
+  {name:'Bahrain Bay',lat:26.224,lng:50.574,country:'BHR',city:'Manama',type:'community',psf:'BHD 95',yield:'7.6%',chg:'+5.5%',status:'100% foreign ownership',layers:['all','gcc','community','roi']},
+  {name:'Dilmunia Island',lat:26.175,lng:50.548,country:'BHR',city:'Manama',type:'offplan',psf:'BHD 72',yield:'8.2%',chg:'New',status:'Q3 2026',layers:['all','gcc','newprojects','roi']},
+  // Oman
+  {name:'Muscat Bay',lat:23.612,lng:58.592,country:'OMN',city:'Muscat',type:'community',psf:'OMR 185',yield:'6.8%',chg:'+3.9%',status:'ITC zone',layers:['all','gcc','community']},
+  {name:'Al Mouj Muscat',lat:23.654,lng:58.251,country:'OMN',city:'Muscat',type:'community',psf:'OMR 210',yield:'6.2%',chg:'+4.8%',status:'Ready — ITC',layers:['all','gcc','community']},
+];
+
+const LAYER_COLORS = {
+  community:  '#e74c3c',
+  affordable: '#f1c40f',
+  roi:        '#f39c12',
+  steady:     '#2ecc71',
+  waterfront: '#3498db',
+  newprojects:'#e67e22',
+  demand:     '#9b59b6',
+  gcc:        '#1abc9c'
+};
+
+let dpmMap = null;
+let mapLayers = {};
+let mapInitialized = false;
+
+
+function initMap() {
+  if (mapInitialized) return;
+  mapInitialized = true;
+
+  dpmMap = L.map('leaflet-map', {
+    center: [24.9, 55.2],
+    zoom: 7,
+    zoomControl: false,
+    attributionControl: false
+  });
+
+  // CARTO Dark tiles
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(dpmMap);
+
+  L.control.attribution({ position: 'bottomright', prefix: '© CARTO © OpenStreetMap' }).addTo(dpmMap);
+
+  // Build layer groups
+  Object.keys(LAYER_COLORS).forEach(layerKey => { mapLayers[layerKey] = []; });
+
+  MAP_MARKERS.forEach(point => {
+    const marker = createMarker(point);
+    point.layers.forEach(layerKey => {
+      if (mapLayers[layerKey]) mapLayers[layerKey].push(marker);
+    });
+  });
+
+  // Render active layers
+  refreshMapLayers();
+}
+
+function refreshMapLayers() {
+  if (!dpmMap) return;
+  // Remove all markers
+  dpmMap.eachLayer(layer => { if (layer instanceof L.Marker) dpmMap.removeLayer(layer); });
+
+  // Re-add enabled ones
+  document.querySelectorAll('.map-layer-item').forEach(item => {
+    if (item.classList.contains('on')) {
+      const key = item.dataset.layer;
+      if (mapLayers[key]) {
+        mapLayers[key].forEach(m => m.addTo(dpmMap));
+      }
+    }
+  });
+}
+
+function toggleMapLayer(el) {
+  el.classList.toggle('on');
+  el.querySelector('.map-layer-check').textContent = el.classList.contains('on') ? '✓' : '';
+  refreshMapLayers();
+}
+
+function setMapTime(btn, time) {
+  document.querySelectorAll('.mtf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function resetMapView() {
+  if (dpmMap) dpmMap.setView([24.9, 55.2], 7);
+}
+
+// ════════════════════════════════════════════════
+//  ⌘K COMMAND PALETTE
+// ════════════════════════════════════════════════
+
+const CMD_COMMANDS = [
+  // Navigation
+  {icon:'📊',title:'Dashboard',sub:'Overview of market stats and KPIs',tag:'Page',action:()=>showSection('dashboard'),cat:'Navigate'},
+  {icon:'⚡',title:'Live Transactions',sub:'DLD real-time transaction feed',tag:'Page',action:()=>showSection('transactions'),cat:'Navigate'},
+  {icon:'📈',title:'Market Trends',sub:'Yield analysis, price trends, RERA index',tag:'Page',action:()=>showSection('market'),cat:'Navigate'},
+  {icon:'🗺️',title:'GCC Property Map',sub:'OpenStreetMap with property layers',tag:'Map',action:()=>showSection('map'),cat:'Navigate'},
+  {icon:'🏙️',title:'Area Analysis',sub:'Price/sqft heatmap for 16 Dubai areas',tag:'Page',action:()=>showSection('areas'),cat:'Navigate'},
+  {icon:'🏠',title:'Rent Listings',sub:'Bayut, Property Finder & Dubizzle',tag:'Page',action:()=>showSection('rent'),cat:'Navigate'},
+  {icon:'🔑',title:'Buy Listings',sub:'Properties for sale across Dubai',tag:'Page',action:()=>showSection('buy'),cat:'Navigate'},
+  {icon:'🏗️',title:'Off-Plan Projects',sub:'58 active launches with ROI data',tag:'Page',action:()=>showSection('offplan'),cat:'Navigate'},
+  {icon:'💎',title:'Property Valuation',sub:'Instant AI-powered valuation tool',tag:'Page',action:()=>showSection('valuation'),cat:'Navigate'},
+  {icon:'💰',title:'ROI Calculator',sub:'5-year investment return projection',tag:'Page',action:()=>showSection('roi'),cat:'Navigate'},
+  {icon:'⚖️',title:'Compare Areas',sub:'Side-by-side area comparison',tag:'Page',action:()=>showSection('compare'),cat:'Navigate'},
+  {icon:'🔔',title:'Price Alerts',sub:'Set custom price notifications',tag:'Page',action:()=>showSection('alerts'),cat:'Navigate'},
+  // Area search
+  ...(['Palm Jumeirah','Downtown Dubai','Dubai Marina','DIFC','Business Bay','JVC','Dubai Hills','MBR City','JBR','Arabian Ranches','Meydan','Silicon Oasis','International City'].map(a => {
+    const info = (typeof AREAS !== 'undefined' ? AREAS : []).find(x=>x.name===a) || {psf:'—',yield:'—',chg:0};
+    return {icon:'📍',title:a,sub:`AED ${info.psf?.toLocaleString?.() || '—'}/sqft · ${info.yield || '—'} yield`,tag:'Area',action:()=>{showSection('areas');document.getElementById('area-search')&&(document.getElementById('area-search').value=a);filterAreas(a);},cat:'Areas'};
+  })),
+  // Actions
+  {icon:'⬇️',title:'Export CSV',sub:'Download all transactions as CSV',tag:'Action',action:exportCSV,cat:'Actions'},
+  {icon:'↻',title:'Refresh Live Data',sub:'Fetch latest DLD transactions',tag:'Action',action:()=>tryLiveData(),cat:'Actions'},
+  {icon:'🌙',title:'Toggle Dark/Light Theme',sub:'Switch color theme',tag:'Action',action:toggleTheme,cat:'Actions'},
+  {icon:'🔔',title:'Set Price Alert',sub:'Get notified on price changes',tag:'Action',action:()=>{showSection('alerts');},cat:'Actions'},
+  // Off-plan
+  {icon:'🔥',title:'Creek Waters 2 — Emaar',sub:'Creek Harbour · From AED 1.2M · 8.2% yield',tag:'Off-Plan',action:()=>{showSection('offplan');},cat:'Off-Plan'},
+  {icon:'🔥',title:'Sobha Seahaven Tower B',sub:'Dubai Harbour · From AED 2.4M · 7.8% yield',tag:'Off-Plan',action:()=>{showSection('offplan');},cat:'Off-Plan'},
+  {icon:'🏗️',title:'Binghatti Skyrise',sub:'Business Bay · From AED 780K · 9.1% yield',tag:'Off-Plan',action:()=>{showSection('offplan');},cat:'Off-Plan'},
+  {icon:'🏗️',title:'Damac Lagoons Phase 4',sub:'Damac Hills 2 · From AED 1.8M · 7.2% yield',tag:'Off-Plan',action:()=>{showSection('offplan');},cat:'Off-Plan'},
+];
+
+let cmdOpen = false;
+let cmdSelected = 0;
+let cmdFiltered = [];
+
+function openCmd() {
+  cmdOpen = true;
+  document.getElementById('cmd-overlay').classList.add('open');
+  setTimeout(()=>{ document.getElementById('cmd-input').focus(); }, 50);
+  filterCmd('');
+}
+
+function closeCmd() {
+  cmdOpen = false;
+  document.getElementById('cmd-overlay').classList.remove('open');
+  document.getElementById('cmd-input').value = '';
+}
+
+function filterCmd(q) {
+  const query = q.toLowerCase().trim();
+  if (!query) {
+    // Show all categories
+    const cats = ['Navigate','Areas','Actions','Off-Plan'];
+    let html = '';
+    cats.forEach(cat => {
+      const items = CMD_COMMANDS.filter(c => c.cat === cat);
+      html += `<div class="cmd-section-label">${cat}</div>`;
+      html += items.slice(0,cat==='Areas'?5:99).map((c,i) => renderCmdItem(c, cat==='Navigate'?i:99)).join('');
+    });
+    document.getElementById('cmd-results').innerHTML = html;
+    cmdFiltered = CMD_COMMANDS.filter(c=>c.cat==='Navigate');
+    cmdSelected = 0;
+  } else {
+    cmdFiltered = CMD_COMMANDS.filter(c =>
+      c.title.toLowerCase().includes(query) || c.sub.toLowerCase().includes(query) || c.tag.toLowerCase().includes(query)
+    ).slice(0, 12);
+    document.getElementById('cmd-results').innerHTML =
+      (cmdFiltered.length ? cmdFiltered.map((c,i)=>renderCmdItem(c,i)).join('') : '<div style="padding:20px;text-align:center;color:var(--t2);font-size:12px">No results for "' + q + '"</div>');
+    cmdSelected = 0;
+  }
+  updateCmdSelection();
+}
+
+function renderCmdItem(c, i) {
+  const tagColor = c.tag==='Area'?'var(--blue)':c.tag==='Off-Plan'?'var(--gold)':c.tag==='Action'?'var(--r)':'var(--accent)';
+  return `<div class="cmd-item" data-idx="${i}" onclick="execCmd(${CMD_COMMANDS.indexOf(c)})">
+    <span class="cmd-item-icon">${c.icon}</span>
+    <div class="cmd-item-text">
+      <div class="cmd-item-title">${c.title}</div>
+      <div class="cmd-item-sub">${c.sub}</div>
+    </div>
+    <span class="cmd-item-tag" style="background:${tagColor}20;color:${tagColor}">${c.tag}</span>
+  </div>`;
+}
+
+function execCmd(idx) {
+  CMD_COMMANDS[idx].action();
+  closeCmd();
+}
+
+function cmdKeyNav(e) {
+  const items = document.querySelectorAll('#cmd-results .cmd-item');
+  if (e.key === 'ArrowDown') { e.preventDefault(); cmdSelected = Math.min(cmdSelected+1, items.length-1); updateCmdSelection(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); cmdSelected = Math.max(cmdSelected-1, 0); updateCmdSelection(); }
+  else if (e.key === 'Enter') { items[cmdSelected]?.click(); }
+  else if (e.key === 'Escape') { closeCmd(); }
+}
+
+function updateCmdSelection() {
+  document.querySelectorAll('#cmd-results .cmd-item').forEach((el,i) => {
+    el.classList.toggle('selected', i === cmdSelected);
+    if (i === cmdSelected) el.scrollIntoView({ block: 'nearest' });
+  });
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); cmdOpen ? closeCmd() : openCmd(); }
+  if (e.key === 'Escape' && cmdOpen) closeCmd();
+});
+
+// ════════════════════════════════════════════════
+//  COACH MARKS
+// ════════════════════════════════════════════════
+
+let coachVisible = false;
+
+function showCoach(btn, title, body) {
+  const tooltip = document.getElementById('coach-tooltip');
+  document.getElementById('ct-title-text').textContent = title;
+  document.getElementById('ct-body-text').textContent = body;
+
+  // Position near the button
+  const rect = btn.getBoundingClientRect();
+  const tw = 280, th = 140;
+  let left = rect.right + 10;
+  let top = rect.top - 10;
+
+  if (left + tw > window.innerWidth - 20) left = rect.left - tw - 10;
+  if (top + th > window.innerHeight - 20) top = window.innerHeight - th - 20;
+  if (top < 10) top = 10;
+
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = top + 'px';
+  tooltip.classList.add('visible');
+  coachVisible = true;
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', hideCoachOutside, { once: true });
+  }, 100);
+}
+
+function hideCoach() {
+  document.getElementById('coach-tooltip').classList.remove('visible');
+  coachVisible = false;
+}
+
+function hideCoachOutside(e) {
+  if (!document.getElementById('coach-tooltip').contains(e.target)) hideCoach();
+}
+
+// Patch showSection to init map when opening map section
+
+
 document.addEventListener('DOMContentLoaded', init);
 </script>
+
+<!-- ═══════ CMD PALETTE ═══════ -->
+<div id="cmd-overlay" onclick="if(event.target===this)closeCmd()">
+  <div class="cmd-box">
+    <div class="cmd-input-wrap">
+      <span class="cmd-icon">🔍</span>
+      <input class="cmd-input" id="cmd-input" placeholder="Search areas, projects, commands..." 
+             oninput="filterCmd(this.value)" onkeydown="cmdKeyNav(event)" autocomplete="off"/>
+      <span class="cmd-esc">ESC</span>
+    </div>
+    <div class="cmd-results" id="cmd-results"></div>
+    <div class="cmd-footer">
+      <span><kbd>↑↓</kbd> navigate</span>
+      <span><kbd>↵</kbd> select</span>
+      <span><kbd>ESC</kbd> close</span>
+      <span style="margin-left:auto;color:var(--accent)">Dubai Property Monitor</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ COACH TOOLTIP ═══════ -->
+<div class="coach-tooltip" id="coach-tooltip">
+  <div class="ct-title">
+    <span class="coach-arrow">◆</span>
+    <span id="ct-title-text">Feature Info</span>
+  </div>
+  <div class="ct-body" id="ct-body-text">Loading...</div>
+  <div style="margin-top:10px">
+    <span class="ct-close" onclick="hideCoach()">Got it ✓</span>
+  </div>
+</div>
+
 </body>
 </html>
