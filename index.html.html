@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dubai Property Monitor V2 — Investor & Renter Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #040608;
+  --surface: #080c10;
+  --panel: #0c1118;
+  --panel2: #101520;
+  --border: rgba(0,210,120,0.12);
+  --border2: rgba(0,210,120,0.06);
+  --green: #00d278;
+  --green2: #00ff99;
+  --green-dim: rgba(0,210,120,0.08);
+  --green-glow: rgba(0,210,120,0.2);
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --blue: #38bdf8;
+  --purple: #a78bfa;
+  --gold: #d4a843;
+  --text: #d4dde8;
+  --text2: #7a8a9a;
+  --text3: #3a4a5a;
+
+  /* MODE COLORS */
+  --investor: #d4a843;
+  --investor-dim: rgba(212,168,67,0.1);
+  --investor-glow: rgba(212,168,67,0.25);
+  --renter: #00d278;
+  --renter-dim: rgba(0,210,120,0.08);
+  --renter-glow: rgba(0,210,120,0.2);
+  --mode-accent: #00d278;
+  --mode-dim: rgba(0,210,120,0.08);
+}
+.investor-mode {
+  --mode-accent: #d4a843;
+  --mode-dim: rgba(212,168,67,0.08);
+  --border: rgba(212,168,67,0.15);
+  --border2: rgba(212,168,67,0.07);
+  --green-dim: rgba(212,168,67,0.08);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:13px;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'JetBrains Mono',monospace;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+body::before{
+  content:'';
+  position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,210,120,0.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,210,120,0.025) 1px,transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+}
+.glow-line{
+  position:fixed;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--mode-accent),transparent);
+  box-shadow:0 0 30px 2px var(--mode-accent);
+  z-index:1000;transition:all 0.5s;
+}
+
+/* ══ HEADER ══════════════════════════════════════════ */
+header{
+  position:sticky;top:0;z-index:500;
+  background:rgba(4,6,8,0.97);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);
+}
+.header-row1{
+  display:flex;align-items:center;gap:1rem;
+  padding:0.6rem 1.2rem;
+  border-bottom:1px solid var(--border2);
+}
+.logo{display:flex;align-items:center;gap:0.6rem;flex-shrink:0;}
+.logo-box{
+  width:30px;height:30px;
+  border:1px solid var(--mode-accent);
+  border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;
+  box-shadow:0 0 12px var(--mode-accent)44;
+  transition:all 0.5s;
+}
+.logo-text{
+  font-family:'Syne',sans-serif;
+  font-size:0.9rem;font-weight:800;
+  letter-spacing:0.08em;
+}
+.logo-text span{color:var(--mode-accent);transition:color 0.5s;}
+
+/* MODE TOGGLE */
+.mode-toggle{
+  display:flex;
+  border:1px solid var(--border);
+  border-radius:4px;overflow:hidden;
+  margin-left:0.5rem;
+}
+.mode-btn{
+  padding:0.35rem 1rem;
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.62rem;letter-spacing:0.12em;
+  text-transform:uppercase;
+  border:none;cursor:pointer;
+  transition:all 0.3s;
+  background:transparent;
+  color:var(--text2);
+}
+.mode-btn.investor-active{
+  background:var(--investor-dim);
+  color:var(--investor);
+  box-shadow:0 0 12px var(--investor-glow);
+}
+.mode-btn.renter-active{
+  background:var(--renter-dim);
+  color:var(--renter);
+  box-shadow:0 0 12px var(--renter-glow);
+}
+
+/* SEARCH BAR */
+.search-wrap{
+  flex:1;max-width:500px;position:relative;
+}
+.search-input{
+  width:100%;
+  background:var(--panel);
+  border:1px solid var(--border);
+  color:var(--text);
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.72rem;
+  padding:0.45rem 2.5rem 0.45rem 0.9rem;
+  border-radius:4px;outline:none;
+  transition:border-color 0.2s;
+}
+.search-input::placeholder{color:var(--text3);}
+.search-input:focus{border-color:var(--mode-accent);}
+.search-icon{
+  position:absolute;right:0.7rem;top:50%;
+  transform:translateY(-50%);
+  color:var(--text3);font-size:0.8rem;
+}
+.search-results{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;
+  background:rgba(8,12,16,0.98);
+  border:1px solid var(--border);
+  border-radius:4px;z-index:100;
+  display:none;
+}
+.search-results.show{display:block;}
+.sr-item{
+  padding:0.6rem 0.9rem;
+  border-bottom:1px solid var(--border2);
+  cursor:pointer;transition:background 0.1s;
+  display:flex;align-items:center;gap:0.6rem;
+}
+.sr-item:hover{background:var(--mode-dim);}
+.sr-item:last-child{border-bottom:none;}
+.sr-icon{font-size:0.75rem;width:18px;text-align:center;}
+.sr-text{font-size:0.65rem;color:var(--text);}
+.sr-tag{font-size:0.55rem;color:var(--mode-accent);margin-left:auto;letter-spacing:0.1em;}
+
+.header-right{display:flex;align-items:center;gap:0.8rem;margin-left:auto;}
+.live-pill{
+  display:flex;align-items:center;gap:0.4rem;
+  font-size:0.6rem;color:var(--green);
+  border:1px solid rgba(0,210,120,0.2);
+  padding:0.25rem 0.6rem;border-radius:20px;
+  background:rgba(0,210,120,0.04);
+}
+.live-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px var(--green);
+  animation:blink 2s infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.hdr-stat{font-size:0.6rem;color:var(--text2);}
+.hdr-stat span{color:var(--mode-accent);}
+
+/* TABS ROW */
+.header-row2{
+  display:flex;align-items:center;
+  padding:0 1.2rem;gap:0.1rem;
+  overflow-x:auto;
+}
+.htab{
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;
+  padding:0.5rem 0.9rem;
+  background:none;border:none;border-bottom:2px solid transparent;
+  color:var(--text2);cursor:pointer;
+  transition:all 0.2s;white-space:nowrap;
+}
+.htab:hover{color:var(--text);}
+.htab.active{
+  color:var(--mode-accent);
+  border-bottom-color:var(--mode-accent);
+}
+
+/* TICKER */
+.ticker{
+  background:rgba(0,210,120,0.03);
+  border-bottom:1px solid var(--border2);
+  padding:0.25rem 0;overflow:hidden;
+  position:relative;z-index:10;
+}
+.ticker-track{
+  display:flex;white-space:nowrap;
+  animation:scroll 80s linear infinite;
+}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ti{
+  display:inline-flex;align-items:center;gap:0.5rem;
+  padding:0 1.8rem;font-size:0.6rem;color:var(--text2);
+  border-right:1px solid var(--border2);
+}
+.ti .tl{color:var(--mode-accent);font-weight:500;letter-spacing:0.1em;}
+.ti .up{color:var(--green);}
+.ti .dn{color:var(--red);}
+.ti .warn{color:var(--amber);}
+
+/* ══ MAIN LAYOUT ══════════════════════════════════════ */
+.app-body{
+  display:grid;
+  grid-template-columns:260px 1fr 280px;
+  height:calc(100vh - 102px);
+  overflow:hidden;
+  position:relative;z-index:5;
+}
+
+/* PANELS */
+.col-left,.col-right{
+  overflow-y:auto;overflow-x:hidden;
+  border-right:1px solid var(--border2);
+}
+.col-right{border-right:none;border-left:1px solid var(--border2);}
+.col-center{overflow-y:auto;display:flex;flex-direction:column;}
+
+.blk{border-bottom:1px solid var(--border2);flex-shrink:0;}
+.blk-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0.55rem 0.9rem;
+  background:rgba(0,210,120,0.02);
+  border-bottom:1px solid var(--border2);
+}
+.blk-title{
+  font-family:'Syne',sans-serif;
+  font-size:0.62rem;font-weight:700;
+  letter-spacing:0.15em;text-transform:uppercase;
+  color:var(--mode-accent);transition:color 0.5s;
+}
+.blk-meta{font-size:0.56rem;color:var(--text3);}
+.blk-body{padding:0.7rem 0.9rem;}
+
+/* SIGNAL GRID */
+.sig-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:1px;background:var(--border2);
+}
+.sig-cell{
+  background:var(--panel);padding:0.65rem 0.75rem;
+  transition:background 0.15s;cursor:default;
+}
+.sig-cell:hover{background:var(--panel2);}
+.sig-lbl{font-size:0.54rem;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:3px;}
+.sig-val{
+  font-family:'Syne',sans-serif;
+  font-size:1.05rem;font-weight:700;line-height:1;
+}
+.sig-val.accent{color:var(--mode-accent);text-shadow:0 0 12px var(--mode-accent)44;}
+.sig-val.amber{color:var(--amber);}
+.sig-val.red{color:var(--red);}
+.sig-delta{font-size:0.56rem;margin-top:3px;}
+.up{color:var(--green);}
+.dn{color:var(--red);}
+.flat{color:var(--text3);}
+
+/* WIDGET SYSTEM */
+.widget-toggle-bar{
+  display:flex;flex-wrap:wrap;gap:0.3rem;
+  padding:0.6rem 0.9rem;
+  border-bottom:1px solid var(--border2);
+}
+.wtog{
+  font-size:0.56rem;padding:0.25rem 0.55rem;
+  border-radius:3px;border:1px solid var(--border);
+  color:var(--text2);background:transparent;
+  cursor:pointer;transition:all 0.15s;
+  font-family:'JetBrains Mono',monospace;
+  letter-spacing:0.08em;
+}
+.wtog:hover,.wtog.on{
+  color:var(--mode-accent);
+  border-color:var(--mode-accent);
+  background:var(--mode-dim);
+}
+
+/* MAP */
+.map-zone{
+  position:relative;
+  background:var(--surface);
+  flex-shrink:0;height:320px;
+  overflow:hidden;
+}
+.map-canvas{width:100%;height:100%;}
+.map-controls{
+  position:absolute;top:0.7rem;left:0.7rem;
+  display:flex;flex-direction:column;gap:0.3rem;
+  z-index:20;
+}
+.map-layer-btn{
+  background:rgba(8,12,16,0.9);
+  border:1px solid var(--border);
+  color:var(--text2);
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.55rem;letter-spacing:0.08em;
+  padding:0.3rem 0.6rem;border-radius:3px;
+  cursor:pointer;transition:all 0.15s;
+  display:flex;align-items:center;gap:0.3rem;
+}
+.map-layer-btn:hover,.map-layer-btn.active{
+  color:var(--mode-accent);border-color:var(--mode-accent);
+  background:var(--mode-dim);
+}
+.map-time{
+  position:absolute;top:0.7rem;right:0.7rem;
+  display:flex;gap:0.2rem;z-index:20;
+}
+.time-btn{
+  background:rgba(8,12,16,0.9);
+  border:1px solid var(--border);
+  color:var(--text3);font-family:'JetBrains Mono',monospace;
+  font-size:0.55rem;padding:0.25rem 0.45rem;
+  border-radius:2px;cursor:pointer;transition:all 0.15s;
+}
+.time-btn:hover,.time-btn.active{
+  color:var(--mode-accent);border-color:var(--mode-accent);
+}
+.map-legend{
+  position:absolute;bottom:0.7rem;left:0.7rem;
+  display:flex;gap:0.8rem;z-index:20;
+  font-size:0.55rem;color:var(--text3);
+}
+.leg-item{display:flex;align-items:center;gap:0.3rem;}
+.leg-dot{width:8px;height:8px;border-radius:50%;}
+.map-label{
+  position:absolute;bottom:0.7rem;right:0.7rem;
+  font-size:0.56rem;color:var(--text3);z-index:20;
+}
+
+/* NEIGHBORHOOD PIN */
+.nbhd-pin{
+  position:absolute;transform:translate(-50%,-50%);
+  cursor:pointer;z-index:15;
+}
+.pin-core{
+  border-radius:50%;border:1.5px solid;
+  transition:transform 0.15s,box-shadow 0.15s;
+  position:relative;
+}
+.nbhd-pin:hover .pin-core{transform:scale(1.8);}
+.pin-pulse{
+  position:absolute;inset:-4px;border-radius:50%;
+  border:1px solid;opacity:0;
+  animation:pulse-ring 2.5s ease-out infinite;
+}
+@keyframes pulse-ring{
+  0%{transform:scale(1);opacity:0.5;}
+  100%{transform:scale(2.5);opacity:0;}
+}
+.pin-label{
+  position:absolute;bottom:calc(100% + 6px);left:50%;
+  transform:translateX(-50%);
+  background:rgba(4,6,8,0.95);
+  border:1px solid var(--border);
+  padding:0.4rem 0.6rem;border-radius:4px;
+  white-space:nowrap;font-size:0.58rem;
+  pointer-events:none;opacity:0;transition:opacity 0.15s;
+  z-index:30;
+}
+.nbhd-pin:hover .pin-label{opacity:1;}
+.pl-name{
+  font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;
+  color:var(--mode-accent);margin-bottom:2px;
+}
+.pl-price{color:var(--text);margin-bottom:2px;}
+.pl-investor{color:var(--gold);}
+.pl-renter{color:var(--green);}
+
+/* CHARTS */
+.charts-duo{
+  display:grid;grid-template-columns:1fr 1fr;
+  border-bottom:1px solid var(--border2);
+  flex-shrink:0;
+}
+.chart-blk{border-right:1px solid var(--border2);}
+.chart-blk:last-child{border-right:none;}
+.chart-wrap{height:130px;position:relative;padding:0.5rem 0.8rem 0.7rem;}
+
+/* MODE-SPECIFIC PANELS */
+.mode-panel{display:none;}
+.mode-panel.show{display:block;}
+
+/* AREA CARDS */
+.area-cards{display:flex;flex-direction:column;gap:0;}
+.area-card{
+  padding:0.6rem 0.9rem;
+  border-bottom:1px solid var(--border2);
+  cursor:pointer;transition:background 0.1s;
+  display:grid;grid-template-columns:1fr auto;gap:0.5rem;
+  align-items:center;
+}
+.area-card:hover{background:var(--mode-dim);}
+.ac-name{font-size:0.68rem;color:var(--text);margin-bottom:2px;}
+.ac-sub{font-size:0.58rem;color:var(--text2);}
+.ac-right{text-align:right;}
+.ac-price{
+  font-family:'Syne',sans-serif;font-size:0.9rem;
+  color:var(--mode-accent);
+}
+.ac-badge{
+  font-size:0.52rem;padding:1px 5px;
+  border-radius:2px;margin-top:2px;display:inline-block;
+}
+
+/* INVESTOR SPECIFIC */
+.yield-bar-row{display:flex;flex-direction:column;gap:0.5rem;}
+.yb-item{display:flex;flex-direction:column;gap:0.2rem;}
+.yb-meta{display:flex;justify-content:space-between;}
+.yb-name{font-size:0.62rem;color:var(--text2);}
+.yb-val{font-size:0.62rem;color:var(--gold);}
+.yb-track{height:3px;background:var(--panel2);border-radius:2px;overflow:hidden;}
+.yb-fill{height:100%;border-radius:2px;background:var(--gold);transition:width 1.5s cubic-bezier(0.4,0,0.2,1);}
+
+/* RENTER SPECIFIC */
+.rera-calc{
+  background:rgba(239,68,68,0.04);
+  border:1px solid rgba(239,68,68,0.15);
+  border-radius:4px;padding:0.7rem;margin-bottom:0.5rem;
+}
+.rera-title{font-size:0.62rem;color:var(--red);margin-bottom:0.5rem;font-weight:600;}
+.rera-row{display:flex;justify-content:space-between;margin-bottom:0.3rem;}
+.rera-lbl{font-size:0.6rem;color:var(--text2);}
+.rera-val{font-size:0.6rem;color:var(--text);}
+
+/* INTEL FEED */
+.intel-item{
+  display:grid;grid-template-columns:24px 1fr;
+  gap:0.6rem;padding:0.65rem 0.9rem;
+  border-bottom:1px solid var(--border2);
+  transition:background 0.1s;cursor:pointer;
+}
+.intel-item:hover{background:rgba(0,210,120,0.02);}
+.ii-icon{
+  width:24px;height:24px;border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;border:1px solid;flex-shrink:0;
+}
+.ii-headline{font-size:0.65rem;color:var(--text);line-height:1.4;margin-bottom:3px;}
+.ii-headline strong{color:var(--mode-accent);}
+.ii-meta{display:flex;gap:0.5rem;font-size:0.55rem;color:var(--text3);}
+.ii-tag{
+  padding:1px 5px;border-radius:2px;
+  font-size:0.52rem;letter-spacing:0.08em;
+}
+
+/* ALERT SIGNUP */
+.alert-form{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:5px;padding:0.9rem;
+  margin:0.7rem 0.9rem;
+}
+.af-title{
+  font-family:'Syne',sans-serif;
+  font-size:0.75rem;font-weight:700;
+  color:var(--mode-accent);margin-bottom:0.6rem;
+}
+.af-sub{font-size:0.6rem;color:var(--text2);margin-bottom:0.8rem;line-height:1.5;}
+.af-row{margin-bottom:0.5rem;}
+.af-label{font-size:0.58rem;color:var(--text2);margin-bottom:0.2rem;display:block;}
+.af-input,.af-select{
+  width:100%;background:var(--surface);
+  border:1px solid var(--border);color:var(--text);
+  font-family:'JetBrains Mono',monospace;font-size:0.65rem;
+  padding:0.4rem 0.6rem;border-radius:3px;outline:none;
+  transition:border-color 0.15s;
+}
+.af-input:focus,.af-select:focus{border-color:var(--mode-accent);}
+option{background:var(--surface);}
+.af-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;margin-bottom:0.5rem;}
+.af-channel{
+  display:flex;gap:0.4rem;margin-bottom:0.6rem;
+}
+.af-ch-btn{
+  flex:1;padding:0.4rem;border-radius:3px;
+  border:1px solid var(--border);
+  font-family:'JetBrains Mono',monospace;
+  font-size:0.6rem;color:var(--text2);
+  background:transparent;cursor:pointer;
+  transition:all 0.15s;text-align:center;
+}
+.af-ch-btn.active{
+  color:var(--mode-accent);border-color:var(--mode-accent);
+  background:var(--mode-dim);
+}
+.af-submit{
+  width:100%;padding:0.5rem;
+  background:var(--mode-accent);
+  border:none;border-radius:3px;
+  font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;
+  letter-spacing:0.1em;text-transform:uppercase;
+  color:#000;cursor:pointer;
+  transition:opacity 0.2s,transform 0.1s;
+}
+.af-submit:hover{opacity:0.9;transform:translateY(-1px);}
+.af-submit:active{transform:translateY(0);}
+
+/* OFF-PLAN TRACKER */
+.offplan-item{
+  padding:0.6rem 0.9rem;
+  border-bottom:1px solid var(--border2);
+  cursor:pointer;transition:background 0.1s;
+}
+.offplan-item:hover{background:var(--mode-dim);}
+.op-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;}
+.op-name{font-size:0.68rem;color:var(--text);}
+.op-dev{font-size:0.58rem;color:var(--text2);}
+.op-price{font-family:'Syne',sans-serif;font-size:0.85rem;color:var(--gold);}
+.op-progress{margin-top:5px;}
+.op-prog-meta{display:flex;justify-content:space-between;margin-bottom:2px;}
+.op-prog-lbl{font-size:0.54rem;color:var(--text3);}
+.op-prog-pct{font-size:0.54rem;color:var(--gold);}
+.op-track{height:3px;background:var(--panel2);border-radius:2px;overflow:hidden;}
+.op-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--amber));border-radius:2px;}
+.op-tags{display:flex;gap:0.3rem;margin-top:4px;flex-wrap:wrap;}
+.op-tag{
+  font-size:0.52rem;padding:1px 5px;border-radius:2px;
+  border:1px solid;
+}
+
+/* COMPARE TOOL */
+.compare-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:0.5rem;margin-bottom:0.5rem;
+}
+.cmp-area{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:4px;padding:0.6rem;
+  text-align:center;
+}
+.cmp-name{
+  font-family:'Syne',sans-serif;font-size:0.7rem;
+  font-weight:700;color:var(--mode-accent);margin-bottom:0.4rem;
+}
+.cmp-stat{margin-bottom:0.2rem;}
+.cmp-lbl{font-size:0.54rem;color:var(--text3);}
+.cmp-val{font-size:0.65rem;color:var(--text);}
+.cmp-winner{
+  font-size:0.52rem;padding:1px 5px;border-radius:2px;
+  background:rgba(0,210,120,0.1);color:var(--green);
+  border:1px solid rgba(0,210,120,0.2);
+  display:inline-block;margin-top:2px;
+}
+
+/* DLD FEED */
+.dld-item{
+  display:grid;grid-template-columns:3px 1fr auto;
+  gap:0.6rem;padding:0.5rem 0.9rem;
+  border-bottom:1px solid var(--border2);
+  align-items:start;
+}
+.dld-accent{border-radius:2px;margin-top:3px;}
+.dld-area{font-size:0.65rem;color:var(--text);}
+.dld-type{font-size:0.58rem;color:var(--text2);}
+.dld-price{
+  font-family:'Syne',sans-serif;
+  font-size:0.85rem;color:var(--gold);
+  text-align:right;white-space:nowrap;
+}
+.dld-time{font-size:0.54rem;color:var(--text3);text-align:right;}
+
+/* BOTTOM BAR */
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:rgba(4,6,8,0.98);
+  border-top:1px solid var(--border2);
+  padding:0.28rem 1.2rem;
+  display:flex;align-items:center;gap:1.2rem;
+  z-index:200;font-size:0.57rem;color:var(--text3);
+  overflow-x:auto;
+}
+.bb-item{display:flex;align-items:center;gap:0.3rem;white-space:nowrap;}
+.bb-sep{width:1px;height:12px;background:var(--border2);flex-shrink:0;}
+.bb-r{margin-left:auto;font-size:0.54rem;color:var(--text3);}
+#clock{color:var(--mode-accent);}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.blk{animation:fadeUp 0.4s ease both;}
+
+/* NOTIFICATION TOAST */
+.toast{
+  position:fixed;bottom:2.5rem;right:1.2rem;
+  background:var(--panel);border:1px solid var(--mode-accent);
+  border-radius:5px;padding:0.8rem 1rem;
+  font-size:0.65rem;color:var(--text);
+  box-shadow:0 4px 20px rgba(0,0,0,0.4);
+  z-index:1000;transform:translateY(20px);opacity:0;
+  transition:all 0.3s;max-width:280px;
+}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast-title{color:var(--mode-accent);font-weight:600;margin-bottom:3px;}
+</style>
+</head>
+<body>
+
+<div class="glow-line" id="glowLine"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-row1">
+    <div class="logo">
+      <div class="logo-box" id="logoBox">⬡</div>
+      <div class="logo-text">DUBAI<span id="logoSpan">PROP</span>MONITOR</div>
+    </div>
+
+    <div class="mode-toggle">
+      <button class="mode-btn renter-active" id="renterBtn" onclick="setMode('renter')">🏠 Renter</button>
+      <button class="mode-btn" id="investorBtn" onclick="setMode('investor')">💰 Investor</button>
+    </div>
+
+    <div class="search-wrap">
+      <input class="search-input" id="searchInput" placeholder="Search areas, trends, data... e.g. 'JVC 1BR under 70k'" 
+        oninput="handleSearch(this.value)" onfocus="showSearch()" onblur="hideSearch()"/>
+      <span class="search-icon">⌕</span>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+
+    <div class="header-right">
+      <div class="live-pill">
+        <div class="live-dot"></div>
+        LIVE · <span id="updateTime">just now</span>
+      </div>
+      <div class="hdr-stat"><span id="listingCount">14,382</span> listings</div>
+      <div class="hdr-stat"><span>6</span> sources</div>
+    </div>
+  </div>
+
+  <div class="header-row2">
+    <button class="htab active" onclick="setTab(this,'overview')">Overview</button>
+    <button class="htab" onclick="setTab(this,'map')">Heat Map</button>
+    <button class="htab" onclick="setTab(this,'search')">Search Listings</button>
+    <button class="htab" onclick="setTab(this,'offplan')">Off-Plan</button>
+    <button class="htab" onclick="setTab(this,'compare')">Compare Areas</button>
+    <button class="htab" onclick="setTab(this,'alerts')">My Alerts</button>
+    <button class="htab" onclick="setTab(this,'transactions')">DLD Transactions</button>
+    <button class="htab" onclick="setTab(this,'rera')">RERA Tools</button>
+  </div>
+</header>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track" id="ticker"></div>
+</div>
+
+<!-- MAIN -->
+<div class="app-body">
+
+  <!-- LEFT SIDEBAR -->
+  <div class="col-left">
+
+    <!-- WIDGET TOGGLES -->
+    <div class="blk">
+      <div class="blk-hdr">
+        <span class="blk-title">My Widgets</span>
+        <span class="blk-meta">Personalise</span>
+      </div>
+      <div class="widget-toggle-bar" id="widgetBar"></div>
+    </div>
+
+    <!-- MARKET SIGNALS -->
+    <div class="blk" id="w-signals">
+      <div class="blk-hdr">
+        <span class="blk-title">Market Signals</span>
+        <span class="blk-meta" id="modeLabel">RENTER VIEW</span>
+      </div>
+      <div class="sig-grid" id="signalGrid"></div>
+    </div>
+
+    <!-- INVESTOR: YIELD MAP | RENTER: FAIR PRICE -->
+    <div class="blk" id="w-mode1">
+      <div class="blk-hdr">
+        <span class="blk-title" id="mode1Title">Fair Price Checker</span>
+        <span class="blk-meta">by area</span>
+      </div>
+      <div class="blk-body" id="mode1Body"></div>
+    </div>
+
+    <!-- AREA MOMENTUM -->
+    <div class="blk" id="w-momentum">
+      <div class="blk-hdr">
+        <span class="blk-title">Area Momentum</span>
+        <span class="blk-meta">30d price pressure</span>
+      </div>
+      <div class="blk-body">
+        <div id="momentumBars"></div>
+      </div>
+    </div>
+
+    <!-- SOURCES -->
+    <div class="blk" id="w-sources">
+      <div class="blk-hdr">
+        <span class="blk-title">Live Sources</span>
+        <span class="blk-meta" style="color:var(--green)">6/7 active</span>
+      </div>
+      <div class="blk-body" style="padding:0.3rem 0.9rem;" id="sourcesPanel"></div>
+    </div>
+
+  </div>
+
+  <!-- CENTER COLUMN -->
+  <div class="col-center">
+
+    <!-- MAP -->
+    <div class="map-zone" id="w-map">
+      <svg class="map-canvas" id="mapSvg" viewBox="0 0 800 320" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <radialGradient id="seaGrad" cx="50%" cy="30%">
+            <stop offset="0%" stop-color="rgba(56,189,248,0.1)"/>
+            <stop offset="100%" stop-color="rgba(56,189,248,0.02)"/>
+          </radialGradient>
+          <filter id="glow2">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- Sea -->
+        <rect x="0" y="0" width="800" height="100" fill="url(#seaGrad)" opacity="0.8"/>
+        <path d="M0,85 Q150,65 280,78 Q380,88 460,72 Q560,55 680,68 Q740,72 800,62 L800,0 L0,0Z"
+          fill="rgba(56,189,248,0.06)"/>
+        <path d="M0,85 Q150,65 280,78 Q380,88 460,72 Q560,55 680,68 Q740,72 800,62"
+          stroke="rgba(56,189,248,0.2)" stroke-width="1" fill="none"/>
+        <!-- Palm Jumeirah -->
+        <ellipse cx="175" cy="105" rx="32" ry="14" fill="rgba(0,210,120,0.05)" stroke="rgba(0,210,120,0.15)" stroke-width="0.5"/>
+        <!-- Grid -->
+        <line x1="0" y1="150" x2="800" y2="150" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+        <line x1="0" y1="210" x2="800" y2="210" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+        <line x1="0" y1="270" x2="800" y2="270" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+        <line x1="133" y1="85" x2="133" y2="320" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+        <line x1="266" y1="85" x2="266" y2="320" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+        <line x1="400" y1="85" x2="400" y2="320" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+        <line x1="533" y1="85" x2="533" y2="320" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+        <line x1="666" y1="85" x2="666" y2="320" stroke="rgba(255,255,255,0.03)" stroke-width="0.5"/>
+        <!-- SZR -->
+        <path d="M50,90 L800,310" stroke="rgba(0,210,120,0.18)" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="440" y="238" fill="rgba(0,210,120,0.3)" font-size="8" font-family="JetBrains Mono" transform="rotate(-21,440,240)">Sheikh Zayed Road</text>
+        <!-- Metro -->
+        <path d="M70,102 Q220,128 400,155 Q560,178 720,192" stroke="rgba(167,139,250,0.25)" stroke-width="1.5" fill="none"/>
+        <text x="560" y="186" fill="rgba(167,139,250,0.35)" font-size="7" font-family="JetBrains Mono">Metro Red Line</text>
+        <!-- Zones -->
+        <circle cx="190" cy="135" r="30" fill="rgba(0,210,120,0.04)" stroke="rgba(0,210,120,0.1)" stroke-width="0.5"/>
+        <circle cx="360" cy="165" r="25" fill="rgba(0,210,120,0.04)" stroke="rgba(0,210,120,0.08)" stroke-width="0.5"/>
+        <circle cx="470" cy="200" r="32" fill="rgba(245,158,11,0.04)" stroke="rgba(245,158,11,0.08)" stroke-width="0.5"/>
+        <circle cx="600" cy="228" r="28" fill="rgba(56,189,248,0.03)" stroke="rgba(56,189,248,0.07)" stroke-width="0.5"/>
+        <text x="700" y="300" fill="rgba(255,255,255,0.04)" font-size="40" font-family="Syne" font-weight="800">DXB</text>
+      </svg>
+
+      <!-- Pins rendered by JS -->
+      <div id="mapPins"></div>
+
+      <div class="map-controls">
+        <button class="map-layer-btn active" onclick="toggleLayer(this,'price')">💰 Price Layer</button>
+        <button class="map-layer-btn" onclick="toggleLayer(this,'yield')">📈 Yield Layer</button>
+        <button class="map-layer-btn" onclick="toggleLayer(this,'supply')">🏗 Supply Layer</button>
+        <button class="map-layer-btn" onclick="toggleLayer(this,'demand')">🔥 Demand Layer</button>
+        <button class="map-layer-btn" onclick="toggleLayer(this,'dupe')">🚩 Duplicates</button>
+      </div>
+
+      <div class="map-time">
+        <button class="time-btn" onclick="setTime(this,'1d')">1D</button>
+        <button class="time-btn" onclick="setTime(this,'7d')">7D</button>
+        <button class="time-btn active" onclick="setTime(this,'30d')">30D</button>
+        <button class="time-btn" onclick="setTime(this,'1y')">1Y</button>
+        <button class="time-btn" onclick="setTime(this,'all')">ALL</button>
+      </div>
+
+      <div class="map-legend">
+        <div class="leg-item"><div class="leg-dot" style="background:#00d278"></div>Rising</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#f59e0b"></div>Stable</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#ef4444"></div>Cooling</div>
+        <div class="leg-item"><div class="leg-dot" style="background:#a78bfa"></div>Off-Plan</div>
+      </div>
+      <div class="map-label">Dubai Property Monitor · Interactive Heat Map</div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="charts-duo" id="w-charts">
+      <div class="chart-blk blk">
+        <div class="blk-hdr">
+          <span class="blk-title" id="chart1Title">Rent Trend</span>
+          <span class="blk-meta">12 months</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart1"></canvas></div>
+      </div>
+      <div class="chart-blk blk">
+        <div class="blk-hdr">
+          <span class="blk-title" id="chart2Title">Supply vs Demand</span>
+          <span class="blk-meta">Listings vs Enquiries</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart2"></canvas></div>
+      </div>
+    </div>
+
+    <!-- DUPLICATE DETECTOR -->
+    <div class="blk" id="w-dupes">
+      <div class="blk-hdr">
+        <span class="blk-title">⚠ Duplicate Detector</span>
+        <span class="blk-meta" style="color:var(--amber)">7 flags today</span>
+      </div>
+      <div class="blk-body" id="dupesPanel"></div>
+    </div>
+
+    <!-- INTELLIGENCE FEED -->
+    <div class="blk" id="w-intel">
+      <div class="blk-hdr">
+        <span class="blk-title">Intelligence Feed</span>
+        <span class="blk-meta">AI-synthesized · All sources</span>
+      </div>
+      <div id="intelFeed"></div>
+    </div>
+
+    <!-- ALERT SIGNUP -->
+    <div id="w-alert">
+      <div class="alert-form">
+        <div class="af-title">🔔 Property Alert Bot</div>
+        <div class="af-sub">Set your criteria once. Our bot watches Bayut, Property Finder & Dubizzle 24/7 and sends matches directly to your WhatsApp or email — before anyone else sees them.</div>
+        <div class="af-row">
+          <label class="af-label">Your Name</label>
+          <input class="af-input" placeholder="e.g. Ahmed Al Rashid" id="alertName"/>
+        </div>
+        <div class="af-grid">
+          <div>
+            <label class="af-label">Area</label>
+            <select class="af-select" id="alertArea">
+              <option>Any Area</option>
+              <option>Dubai Marina</option>
+              <option>JVC</option>
+              <option>Downtown Dubai</option>
+              <option>Business Bay</option>
+              <option>Palm Jumeirah</option>
+              <option>JBR</option>
+              <option>DIFC</option>
+              <option>Deira</option>
+              <option>Discovery Gardens</option>
+            </select>
+          </div>
+          <div>
+            <label class="af-label">Property Type</label>
+            <select class="af-select" id="alertType">
+              <option>Any Type</option>
+              <option>Studio</option>
+              <option>1 Bedroom</option>
+              <option>2 Bedrooms</option>
+              <option>3 Bedrooms</option>
+              <option>Villa</option>
+              <option>Penthouse</option>
+            </select>
+          </div>
+          <div>
+            <label class="af-label">Min Budget (AED/yr)</label>
+            <input class="af-input" placeholder="e.g. 60000" id="alertMin"/>
+          </div>
+          <div>
+            <label class="af-label">Max Budget (AED/yr)</label>
+            <input class="af-input" placeholder="e.g. 90000" id="alertMax"/>
+          </div>
+        </div>
+        <label class="af-label">Alert Channel</label>
+        <div class="af-channel">
+          <button class="af-ch-btn active" id="chWA" onclick="toggleChannel('WA')">📱 WhatsApp</button>
+          <button class="af-ch-btn" id="chEM" onclick="toggleChannel('EM')">📧 Email</button>
+          <button class="af-ch-btn" id="chBOTH" onclick="toggleChannel('BOTH')">Both</button>
+        </div>
+        <div class="af-row" id="contactRow">
+          <label class="af-label">WhatsApp Number (with country code)</label>
+          <input class="af-input" placeholder="e.g. +971501234567" id="alertContact"/>
+        </div>
+        <button class="af-submit" onclick="submitAlert()">ACTIVATE MY ALERT BOT →</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT SIDEBAR -->
+  <div class="col-right">
+
+    <!-- MODE-SPECIFIC: INVESTOR -->
+    <div class="blk mode-panel" id="investor-panel1">
+      <div class="blk-hdr">
+        <span class="blk-title">Yield Intelligence</span>
+        <span class="blk-meta">Gross rental yield %</span>
+      </div>
+      <div class="blk-body">
+        <div class="yield-bar-row" id="yieldBars"></div>
+      </div>
+    </div>
+
+    <!-- MODE-SPECIFIC: INVESTOR OFF-PLAN -->
+    <div class="blk mode-panel" id="investor-panel2">
+      <div class="blk-hdr">
+        <span class="blk-title">Off-Plan Tracker</span>
+        <span class="blk-meta">Active developments</span>
+      </div>
+      <div id="offplanFeed"></div>
+    </div>
+
+    <!-- MODE-SPECIFIC: RENTER -->
+    <div class="blk mode-panel show" id="renter-panel1">
+      <div class="blk-hdr">
+        <span class="blk-title">RERA Rent Tool</span>
+        <span class="blk-meta">Know your rights</span>
+      </div>
+      <div class="blk-body">
+        <div class="rera-calc">
+          <div class="rera-title">⚖️ Rent Increase Cap (2026)</div>
+          <div class="rera-row"><span class="rera-lbl">0–10% below market</span><span class="rera-val" style="color:var(--green)">No increase allowed</span></div>
+          <div class="rera-row"><span class="rera-lbl">11–20% below market</span><span class="rera-val" style="color:var(--amber)">Max 5% increase</span></div>
+          <div class="rera-row"><span class="rera-lbl">21–30% below market</span><span class="rera-val" style="color:var(--amber)">Max 10% increase</span></div>
+          <div class="rera-row"><span class="rera-lbl">31–40% below market</span><span class="rera-val" style="color:var(--red)">Max 15% increase</span></div>
+          <div class="rera-row"><span class="rera-lbl">40%+ below market</span><span class="rera-val" style="color:var(--red)">Max 20% increase</span></div>
+        </div>
+        <div style="font-size:0.6rem;color:var(--text2);line-height:1.6;">
+          If your landlord exceeds these caps, file a complaint with <span style="color:var(--red)">RDC (Rental Disputes Centre)</span> — enforced by law.
+        </div>
+      </div>
+    </div>
+
+    <!-- MODE-SPECIFIC: RENTER AREA COMPARE -->
+    <div class="blk mode-panel show" id="renter-panel2">
+      <div class="blk-hdr">
+        <span class="blk-title">Budget Area Guide</span>
+        <span class="blk-meta">Best value neighborhoods</span>
+      </div>
+      <div id="renterAreas"></div>
+    </div>
+
+    <!-- DLD TRANSACTIONS -->
+    <div class="blk" id="w-dld">
+      <div class="blk-hdr">
+        <span class="blk-title">DLD Transactions</span>
+        <span class="blk-meta">Live · Ejari registered</span>
+      </div>
+      <div class="blk-body" style="padding-bottom:0.3rem;">
+        <div style="display:flex;gap:1.2rem;margin-bottom:0.7rem;">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:var(--gold);text-shadow:0 0 15px var(--gold)44;" id="dldNum">4,127</div>
+            <div style="font-size:0.54rem;color:var(--text3);letter-spacing:0.1em;">Q1 TRANSACTIONS</div>
+          </div>
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--blue);">AED 9.4B</div>
+            <div style="font-size:0.54rem;color:var(--text3);letter-spacing:0.1em;">TOTAL VOLUME</div>
+          </div>
+        </div>
+      </div>
+      <div id="dldFeed"></div>
+    </div>
+
+    <!-- SEARCH TRENDS -->
+    <div class="blk" id="w-trends">
+      <div class="blk-hdr">
+        <span class="blk-title">Search Demand</span>
+        <span class="blk-meta">Google Trends · UAE</span>
+      </div>
+      <div class="blk-body" style="padding-top:0.3rem;" id="trendPanel"></div>
+    </div>
+
+    <!-- MACRO -->
+    <div class="blk" id="w-macro">
+      <div class="blk-hdr">
+        <span class="blk-title">Macro Signals</span>
+        <span class="blk-meta">Demand drivers</span>
+      </div>
+      <div class="blk-body" id="macroPanel"></div>
+    </div>
+
+    <!-- ABOUT -->
+    <div class="blk">
+      <div class="blk-hdr"><span class="blk-title">About</span></div>
+      <div class="blk-body" style="font-size:0.6rem;color:var(--text2);line-height:1.7;">
+        <p style="margin-bottom:0.4rem;">All data is <strong style="color:var(--text)">publicly available</strong> — DLD, RERA, DXB Interact, Property Finder, Bayut, Dubizzle, Google Trends.</p>
+        <p style="margin-bottom:0.4rem;color:var(--amber)">Not financial advice. Informational only.</p>
+        <p style="font-size:0.56rem;color:var(--text3);margin-top:0.5rem;">Free · No login · No ads · Public intelligence</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <div class="bb-item">DLD Index <span class="up" style="margin-left:4px;">▲ 2.4%</span></div>
+  <div class="bb-sep"></div>
+  <div class="bb-item">Palm Jumeirah <span class="up" style="margin-left:4px;color:var(--green)">AED 2,100/sqft ▲</span></div>
+  <div class="bb-sep"></div>
+  <div class="bb-item">Downtown <span class="up" style="margin-left:4px;color:var(--green)">AED 1,850/sqft ▲</span></div>
+  <div class="bb-sep"></div>
+  <div class="bb-item">Marina <span class="up" style="margin-left:4px;color:var(--green)">AED 1,420/sqft ▲</span></div>
+  <div class="bb-sep"></div>
+  <div class="bb-item">Business Bay <span class="up" style="margin-left:4px;color:var(--green)">AED 1,180/sqft ▲</span></div>
+  <div class="bb-sep"></div>
+  <div class="bb-item">JVC <span style="margin-left:4px;color:var(--text2)">AED 720/sqft →</span></div>
+  <div class="bb-sep"></div>
+  <div class="bb-item">Deira <span class="dn" style="margin-left:4px;">AED 420/sqft ▼</span></div>
+  <div class="bb-sep"></div>
+  <div class="bb-item">New Today <span style="margin-left:4px;color:var(--text)">142 listings</span></div>
+  <div class="bb-r">DUBAIPROPERTYMONITOR · FREE PUBLIC INTELLIGENCE · <span id="clock"></span></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <div class="toast-title" id="toastTitle"></div>
+  <div id="toastMsg"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let currentMode = 'renter';
+let activeWidgets = ['signals','momentum','sources','map','charts','dupes','intel','alert','dld','trends','macro'];
+let alertChannel = 'WA';
+
+// ═══════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════
+const RENTER_SIGNALS = [
+  {l:'Avg Rent · Dubai',v:'112.4k',cls:'accent',d:'▲ 8.3% YoY',dc:'up'},
+  {l:'Fair Price 1BR Marina',v:'105k',cls:'accent',d:'Market rate',dc:'flat'},
+  {l:'Vacancy Rate',v:'6.2%',cls:'amber',d:'▼ 1.4pp QoQ',dc:'up'},
+  {l:'Days on Market',v:'18d',cls:'accent',d:'▼ 6d faster',dc:'up'},
+  {l:'New Listings 30d',v:'3,241',cls:'',d:'▼ 12% MoM',dc:'dn'},
+  {l:'RERA Max Increase',v:'20%',cls:'red',d:'Demand zones',dc:'flat'},
+  {l:'Duplicate Flags',v:'7',cls:'amber',d:'Today',dc:'flat'},
+  {l:'Avg Studio Rent',v:'52k',cls:'accent',d:'▲ 3.1% YoY',dc:'up'},
+];
+
+const INVESTOR_SIGNALS = [
+  {l:'Avg Rental Yield',v:'6.8%',cls:'accent',d:'▲ 0.3pp YoY',dc:'up'},
+  {l:'Capital Appreciation',v:'+19.3%',cls:'accent',d:'2025 full year',dc:'up'},
+  {l:'DLD Transactions',v:'4,127',cls:'accent',d:'▲ Q1 record',dc:'up'},
+  {l:'Total Volume',v:'AED 9.4B',cls:'amber',d:'Q1 2026',dc:'up'},
+  {l:'Off-Plan Sales',v:'58%',cls:'accent',d:'of total sales',dc:'up'},
+  {l:'Foreign Buyers',v:'42%',cls:'',d:'of transactions',dc:'flat'},
+  {l:'Price / sqft',v:'AED 97',cls:'accent',d:'▲ 5.1% YoY',dc:'up'},
+  {l:'Forecast 2026',v:'+8–11%',cls:'accent',d:'ValuStrat',dc:'up'},
+];
+
+const NEIGHBORHOODS = [
+  {name:'Palm Jumeirah',x:'22%',y:'36%',color:'#00d278',size:13,rent:210000,yield:5.8,sqft:2100,change:'+12.4%',pressure:'HIGH',type:'premium'},
+  {name:'Downtown Dubai',x:'45%',y:'49%',color:'#00d278',size:12,rent:185000,yield:5.2,sqft:1850,change:'+9.8%',pressure:'HIGH',type:'premium'},
+  {name:'Dubai Marina',x:'20%',y:'45%',color:'#38bdf8',size:11,rent:142000,yield:6.1,sqft:1420,change:'+7.2%',pressure:'MED',type:'high'},
+  {name:'Business Bay',x:'50%',y:'54%',color:'#f59e0b',size:11,rent:118000,yield:6.8,sqft:1180,change:'+11.3%',pressure:'HIGH',type:'mid'},
+  {name:'DIFC',x:'43%',y:'52%',color:'#34d399',size:8,rent:115000,yield:5.9,sqft:1150,change:'+8.9%',pressure:'MED',type:'mid'},
+  {name:'JBR',x:'17%',y:'39%',color:'#a78bfa',size:9,rent:138000,yield:5.5,sqft:1380,change:'+6.5%',pressure:'MED',type:'high'},
+  {name:'JVC',x:'32%',y:'64%',color:'#38bdf8',size:9,rent:72000,yield:7.8,sqft:720,change:'+4.1%',pressure:'LOW',type:'value'},
+  {name:'Discovery Gardens',x:'24%',y:'71%',color:'#94a3b8',size:7,rent:58000,yield:7.2,sqft:580,change:'+2.3%',pressure:'LOW',type:'budget'},
+  {name:'Deira',x:'72%',y:'34%',color:'#ef4444',size:8,rent:42000,yield:8.1,sqft:420,change:'-0.8%',pressure:'NONE',type:'budget'},
+  {name:'Dubai Creek Harbour',x:'62%',y:'42%',color:'#a78bfa',size:9,rent:95000,yield:6.4,sqft:950,change:'+15.2%',pressure:'HIGH',type:'offplan'},
+];
+
+const MOMENTUM = [
+  {area:'Business Bay',val:82,change:'+11.3%',dir:'up'},
+  {area:'Palm Jumeirah',val:94,change:'+12.4%',dir:'up'},
+  {area:'Creek Harbour',val:88,change:'+15.2%',dir:'up'},
+  {area:'Downtown Dubai',val:85,change:'+9.8%',dir:'up'},
+  {area:'Dubai Marina',val:71,change:'+7.2%',dir:'up'},
+  {area:'JVC',val:42,change:'+4.1%',dir:'up'},
+  {area:'Deira',val:18,change:'-0.8%',dir:'down'},
+];
+
+const SOURCES = [
+  {name:'Dubai Land Dept (DLD)',color:'#00d278',status:'LIVE',count:'4,127 tx today'},
+  {name:'Property Finder',color:'#38bdf8',status:'LIVE',count:'6,841 listings'},
+  {name:'Bayut',color:'#a78bfa',status:'LIVE',count:'5,120 listings'},
+  {name:'Dubizzle',color:'#f59e0b',status:'LIVE',count:'2,421 listings'},
+  {name:'Google Trends · UAE',color:'#34d399',status:'LIVE',count:'Updated hourly'},
+  {name:'DXB Interact / DSC',color:'#60a5fa',status:'LIVE',count:'Q4 2025 data'},
+  {name:'Social Media Mkt',color:'#f87171',status:'PARTIAL',count:'~800 scraped'},
+];
+
+const OFFPLAN = [
+  {name:'Creek Gate Tower',dev:'Emaar',area:'Dubai Creek Harbour',price:'AED 1.2M',pct:68,delivery:'Q2 2027',tags:[{t:'GCC BUYERS',c:'#d4a843'},{t:'HIGH DEMAND',c:'#00d278'}]},
+  {name:'Sobha Hartland 2',dev:'Sobha Realty',area:'MBR City',price:'AED 2.1M',pct:45,delivery:'Q4 2027',tags:[{t:'LUXURY',c:'#a78bfa'},{t:'WATERFRONT',c:'#38bdf8'}]},
+  {name:'Binghatti Hills',dev:'Binghatti',area:'JVC',price:'AED 680K',pct:82,delivery:'Q1 2027',tags:[{t:'VALUE',c:'#34d399'},{t:'NEAR METRO',c:'#38bdf8'}]},
+  {name:'Damac Islands',dev:'Damac',area:'Dubailand',price:'AED 1.8M',pct:22,delivery:'Q3 2028',tags:[{t:'EARLY STAGE',c:'#f59e0b'},{t:'VILLA',c:'#d4a843'}]},
+];
+
+const YIELDS = [
+  {area:'Deira',yield:8.1,max:10},
+  {area:'JVC',yield:7.8,max:10},
+  {area:'Discovery Gardens',yield:7.2,max:10},
+  {area:'Business Bay',yield:6.8,max:10},
+  {area:'Dubai Creek Harbour',yield:6.4,max:10},
+  {area:'Dubai Marina',yield:6.1,max:10},
+  {area:'DIFC',yield:5.9,max:10},
+  {area:'Downtown Dubai',yield:5.2,max:10},
+];
+
+const RENTER_AREAS = [
+  {name:'JVC',avg:72000,studio:48000,one:68000,two:88000,badge:'BEST VALUE',bc:'rgba(0,210,120,0.1)',tc:'#00d278'},
+  {name:'Discovery Gardens',avg:58000,studio:40000,one:55000,two:72000,badge:'BUDGET FRIENDLY',bc:'rgba(56,189,248,0.1)',tc:'#38bdf8'},
+  {name:'Deira',avg:42000,studio:32000,one:42000,two:58000,badge:'LOWEST RENT',bc:'rgba(212,168,67,0.1)',tc:'#d4a843'},
+  {name:'Sports City',avg:65000,studio:44000,one:62000,two:80000,badge:'GOOD VALUE',bc:'rgba(167,139,250,0.1)',tc:'#a78bfa'},
+];
+
+const INTEL_FEED = [
+  {icon:'📊',ic:'rgba(0,210,120,0.1)',ib:'rgba(0,210,120,0.2)',headline:'<strong>Business Bay</strong> asking rents up 11.3% YoY — enquiry volume surpassed new listings for 3rd consecutive week',source:'DLD + Property Finder',time:'4m ago',tag:'DEMAND SIGNAL',tc:'#00d278'},
+  {icon:'🚩',ic:'rgba(245,158,11,0.1)',ib:'rgba(245,158,11,0.2)',headline:'Same 2BR in JBR listed by <strong>3 agents</strong> at AED 120k, 125k and 132k — multi-agent listing, negotiate hard',source:'Cross-platform scan',time:'18m ago',tag:'DUPLICATE ALERT',tc:'#f59e0b'},
+  {icon:'📰',ic:'rgba(56,189,248,0.1)',ib:'rgba(56,189,248,0.2)',headline:'RERA Ejari compliance checks begin — unregistered listings being removed, <strong>supply may tighten 8–12%</strong>',source:'Dubai Media Office',time:'1h ago',tag:'REGULATION',tc:'#38bdf8'},
+  {icon:'📈',ic:'rgba(212,168,67,0.1)',ib:'rgba(212,168,67,0.2)',headline:'Dubai Creek Harbour searches up <strong>340% YoY</strong> — off-plan demand from Indian and European buyers accelerating',source:'Google Trends API',time:'2h ago',tag:'SEARCH SIGNAL',tc:'#d4a843'},
+  {icon:'🏗',ic:'rgba(167,139,250,0.1)',ib:'rgba(167,139,250,0.2)',headline:'DDA approves 3 new towers in JVC — <strong>1,840 units</strong> expected delivery Q3 2027. Supply pressure to ease mid-term',source:'Dubai Dev Authority',time:'3h ago',tag:'SUPPLY',tc:'#a78bfa'},
+];
+
+const DUPES = [
+  {badge:'3 PORTALS',flag:'🚩 Multi-portal duplicate',body:'<strong>1BR · Dubai Marina · Tower X</strong> — Listed by 3 agents at AED 105k, 108k, 112k. Same floor plan. Agent competition = your negotiation leverage.'},
+  {badge:'PRICE GAP',flag:'⚠ Price inconsistency detected',body:'<strong>2BR · JVC</strong> — Same unit listed AED 78,000 (Bayut) vs AED 92,000 (Property Finder). Always verify directly with landlord.'},
+];
+
+const DLD_FEED = [
+  {area:'Downtown Dubai',type:'2BR Apt',price:'AED 185,000',time:'8m ago',c:'#00d278'},
+  {area:'Palm Jumeirah',type:'3BR Villa',price:'AED 395,000',time:'22m ago',c:'#38bdf8'},
+  {area:'JVC',type:'1BR Apt',price:'AED 67,000',time:'41m ago',c:'#a78bfa'},
+  {area:'Business Bay',type:'Studio',price:'AED 55,000',time:'58m ago',c:'#f59e0b'},
+  {area:'Creek Harbour',type:'2BR Apt',price:'AED 95,000',time:'1h ago',c:'#34d399'},
+];
+
+const SEARCH_TRENDS = [
+  {term:'Dubai Marina apartment',vol:95},
+  {term:'JVC 1 bedroom rent',vol:87},
+  {term:'Dubai rent 2026',vol:81},
+  {term:'Off plan Dubai Creek',vol:74},
+  {term:'Palm Jumeirah villa',vol:62},
+  {term:'Business Bay studio',vol:55},
+  {term:'Dubai rent increase RERA',vol:48},
+];
+
+const MACRO = [
+  {label:'Golden Visa applications',val:'↑ 34% QoQ',c:'#00d278'},
+  {label:'New company licenses (DET)',val:'12,840 Q1',c:'#38bdf8'},
+  {label:'Tourist arrivals (DTCM)',val:'5.2M Jan–Feb',c:'#a78bfa'},
+  {label:'DIFC employee growth',val:'↑ 18% YoY',c:'#f59e0b'},
+  {label:'Abu Dhabi–Dubai commuters',val:'Est. 85,000/day',c:'#34d399'},
+  {label:'RERA max rent increase',val:'Up to 20% cap',c:'#ef4444'},
+];
+
+const TICKER_ITEMS = [
+  {l:'DLD',t:'4,127 transactions registered Q1 2026 — record quarter',cls:'up'},
+  {l:'BAYUT',t:'Average time-to-lease dropped to 18 days in Dubai',cls:'up'},
+  {l:'PROPERTY FINDER',t:'1BR Marina listings down 14% — supply tightest since 2014',cls:'warn'},
+  {l:'GOOGLE TRENDS',t:'"Dubai rent 2026" searches up 340% YoY',cls:'up'},
+  {l:'RERA',t:'Rent increase cap remains 20% max for high-demand zones',cls:'warn'},
+  {l:'DXB INTERACT',t:'Dubai population reached 3.8M — growing 6.2% annually',cls:'up'},
+  {l:'ALERT BOT',t:'New 1BR match found in JVC at AED 67,000 — 3 units available',cls:'up'},
+  {l:'DUPLICATE ALERT',t:'Same JBR unit listed on 3 portals at 3 different prices — flag raised',cls:'warn'},
+];
+
+const SEARCH_SUGGESTIONS = {
+  default:[
+    {icon:'📍',text:'JVC 1 bedroom under 70,000 AED',tag:'SEARCH'},
+    {icon:'📈',text:'Best yield areas Dubai 2026',tag:'INTEL'},
+    {icon:'⚖️',text:'RERA rent increase calculator',tag:'TOOL'},
+    {icon:'🏗',text:'Off-plan projects JVC delivery 2027',tag:'OFFPLAN'},
+    {icon:'🔍',text:'Duplicate listings today',tag:'ALERTS'},
+    {icon:'💰',text:'Investor ROI comparison JVC vs Business Bay',tag:'COMPARE'},
+  ],
+  jvc:[
+    {icon:'🏠',text:'JVC 1BR apartments under 70k',tag:'LISTINGS'},
+    {icon:'📊',text:'JVC market trend 2026',tag:'INTEL'},
+    {icon:'🏗',text:'JVC off-plan projects',tag:'OFFPLAN'},
+    {icon:'💰',text:'JVC rental yield analysis',tag:'INVESTOR'},
+  ],
+  marina:[
+    {icon:'🏠',text:'Dubai Marina 2BR apartments',tag:'LISTINGS'},
+    {icon:'📊',text:'Marina price trend 2026',tag:'INTEL'},
+    {icon:'🚩',text:'Marina duplicate listings today',tag:'ALERTS'},
+    {icon:'💰',text:'Marina vs JBR investment comparison',tag:'COMPARE'},
+  ],
+};
+
+const WIDGETS = [
+  {id:'signals',label:'Signals'},
+  {id:'momentum',label:'Momentum'},
+  {id:'sources',label:'Sources'},
+  {id:'map',label:'Map'},
+  {id:'charts',label:'Charts'},
+  {id:'dupes',label:'Duplicates'},
+  {id:'intel',label:'Intel Feed'},
+  {id:'alert',label:'Alert Bot'},
+  {id:'dld',label:'DLD'},
+  {id:'trends',label:'Trends'},
+  {id:'macro',label:'Macro'},
+];
+
+// ═══════════════════════════════════════════════════
+// MODE SYSTEM
+// ═══════════════════════════════════════════════════
+function setMode(mode) {
+  currentMode = mode;
+  const isInvestor = mode === 'investor';
+
+  // Update CSS
+  document.body.className = isInvestor ? 'investor-mode' : '';
+
+  // Update glow line
+  document.getElementById('glowLine').style.background =
+    isInvestor
+      ? 'linear-gradient(90deg,transparent,#d4a843,transparent)'
+      : 'linear-gradient(90deg,transparent,#00d278,transparent)';
+  document.getElementById('glowLine').style.boxShadow =
+    isInvestor ? '0 0 30px 2px rgba(212,168,67,0.3)' : '0 0 30px 2px rgba(0,210,120,0.2)';
+
+  // Update logo
+  document.getElementById('logoSpan').style.color = isInvestor ? '#d4a843' : '#00d278';
+
+  // Update buttons
+  document.getElementById('investorBtn').className = isInvestor ? 'mode-btn investor-active' : 'mode-btn';
+  document.getElementById('renterBtn').className = !isInvestor ? 'mode-btn renter-active' : 'mode-btn';
+
+  // Update mode label
+  document.getElementById('modeLabel').textContent = isInvestor ? 'INVESTOR VIEW' : 'RENTER VIEW';
+
+  // Switch signals
+  renderSignals();
+
+  // Switch mode panels
+  document.querySelectorAll('.mode-panel').forEach(p => p.classList.remove('show'));
+  if (isInvestor) {
+    document.getElementById('investor-panel1').classList.add('show');
+    document.getElementById('investor-panel2').classList.add('show');
+    document.getElementById('chart1Title').textContent = 'Price / sqft Trend';
+    document.getElementById('chart2Title').textContent = 'Transaction Volume';
+    document.getElementById('mode1Title').textContent = 'Yield by Area';
+  } else {
+    document.getElementById('renter-panel1').classList.add('show');
+    document.getElementById('renter-panel2').classList.add('show');
+    document.getElementById('chart1Title').textContent = 'Rent Trend';
+    document.getElementById('chart2Title').textContent = 'Supply vs Demand';
+    document.getElementById('mode1Title').textContent = 'Fair Price Checker';
+  }
+
+  renderMode1();
+  renderMapPins();
+
+  showToast(
+    isInvestor ? '💰 Investor Mode' : '🏠 Renter Mode',
+    isInvestor
+      ? 'Showing yield, ROI, off-plan and DLD intelligence'
+      : 'Showing fair prices, RERA tools and duplicate alerts'
+  );
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER FUNCTIONS
+// ═══════════════════════════════════════════════════
+function renderSignals() {
+  const data = currentMode === 'investor' ? INVESTOR_SIGNALS : RENTER_SIGNALS;
+  const grid = document.getElementById('signalGrid');
+  grid.innerHTML = data.map(s => `
+    <div class="sig-cell">
+      <div class="sig-lbl">${s.l}</div>
+      <div class="sig-val ${s.cls}">${s.v}</div>
+      <div class="sig-delta ${s.dc}">${s.d}</div>
+    </div>`).join('');
+}
+
+function renderMode1() {
+  const body = document.getElementById('mode1Body');
+  if (currentMode === 'investor') {
+    // Yield bars
+    body.innerHTML = `<div class="yield-bar-row">` +
+      YIELDS.map(y => `
+        <div class="yb-item">
+          <div class="yb-meta">
+            <span class="yb-name">${y.area}</span>
+            <span class="yb-val">${y.yield}%</span>
+          </div>
+          <div class="yb-track">
+            <div class="yb-fill" style="width:${(y.yield/y.max)*100}%"></div>
+          </div>
+        </div>`).join('') + `</div>`;
+  } else {
+    // Fair price checker
+    body.innerHTML = RENTER_AREAS.map(a => `
+      <div class="area-card">
+        <div>
+          <div class="ac-name">${a.name}</div>
+          <div class="ac-sub">Studio: AED ${a.studio.toLocaleString()} · 1BR: AED ${a.one.toLocaleString()}</div>
+          <div class="ac-sub">2BR: AED ${a.two.toLocaleString()}</div>
+        </div>
+        <div class="ac-right">
+          <div class="ac-price">AED ${a.avg.toLocaleString()}</div>
+          <div class="ac-badge" style="background:${a.bc};color:${a.tc};border:1px solid ${a.tc}33;">${a.badge}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function renderMapPins() {
+  const container = document.getElementById('mapPins');
+  container.innerHTML = '';
+  NEIGHBORHOODS.forEach(n => {
+    const isInvestor = currentMode === 'investor';
+    const el = document.createElement('div');
+    el.className = 'nbhd-pin';
+    el.style.cssText = `left:${n.x};top:${n.y};position:absolute;`;
+    const s = n.size;
+    el.innerHTML = `
+      <div class="pin-core" style="width:${s}px;height:${s}px;background:${n.color}22;border-color:${n.color};box-shadow:0 0 ${s}px ${n.color}55;">
+        <div class="pin-pulse" style="border-color:${n.color};"></div>
+      </div>
+      <div class="pin-label">
+        <div class="pl-name">${n.name}</div>
+        <div class="pl-price">AED ${n.rent.toLocaleString()}/yr</div>
+        ${isInvestor
+          ? `<div class="pl-investor">Yield: ${n.yield}% · ${n.sqft} AED/sqft</div>`
+          : `<div class="pl-renter">Pressure: ${n.pressure} · ${n.change} YoY</div>`
+        }
+      </div>`;
+    container.appendChild(el);
+  });
+}
+
+function renderMomentum() {
+  const el = document.getElementById('momentumBars');
+  el.innerHTML = MOMENTUM.map(m => {
+    const c = m.dir === 'up' ? 'var(--green)' : m.dir === 'down' ? 'var(--red)' : 'var(--amber)';
+    return `
+      <div style="margin-bottom:0.5rem;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+          <span style="font-size:0.62rem;color:var(--text2);">${m.area}</span>
+          <span style="font-size:0.62rem;color:${c};">${m.change}</span>
+        </div>
+        <div style="height:3px;background:var(--panel2);border-radius:2px;overflow:hidden;">
+          <div style="width:${m.val}%;height:100%;background:${c};border-radius:2px;"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderSources() {
+  const el = document.getElementById('sourcesPanel');
+  el.innerHTML = SOURCES.map(s => {
+    const partial = s.status === 'PARTIAL';
+    return `
+      <div style="display:flex;align-items:center;gap:0.4rem;padding:0.35rem 0;border-bottom:1px solid var(--border2);cursor:pointer;">
+        <div style="width:6px;height:6px;border-radius:50%;background:${partial?'var(--amber)':s.color};box-shadow:0 0 5px ${partial?'var(--amber)':s.color}55;flex-shrink:0;"></div>
+        <span style="font-size:0.63rem;color:var(--text);flex:1;">${s.name}</span>
+        <span style="font-size:0.57rem;color:var(--text3);">${s.count}</span>
+        <span style="font-size:0.6rem;color:${partial?'var(--amber)':'var(--green)'};">${partial?'◐':'●'}</span>
+      </div>`;
+  }).join('');
+}
+
+function renderOffplan() {
+  const el = document.getElementById('offplanFeed');
+  el.innerHTML = OFFPLAN.map(o => `
+    <div class="offplan-item">
+      <div class="op-header">
+        <div>
+          <div class="op-name">${o.name}</div>
+          <div class="op-dev">${o.dev} · ${o.area}</div>
+        </div>
+        <div class="op-price">${o.price}</div>
+      </div>
+      <div class="op-progress">
+        <div class="op-prog-meta">
+          <span class="op-prog-lbl">Construction · Delivery ${o.delivery}</span>
+          <span class="op-prog-pct">${o.pct}%</span>
+        </div>
+        <div class="op-track"><div class="op-fill" style="width:${o.pct}%"></div></div>
+      </div>
+      <div class="op-tags">
+        ${o.tags.map(t=>`<span class="op-tag" style="color:${t.c};border-color:${t.c}44;">${t.t}</span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function renderRenterAreas() {
+  const el = document.getElementById('renterAreas');
+  el.innerHTML = RENTER_AREAS.map(a => `
+    <div class="area-card">
+      <div>
+        <div class="ac-name">${a.name}</div>
+        <div class="ac-sub">1BR avg: AED ${a.one.toLocaleString()}/yr</div>
+      </div>
+      <div class="ac-right">
+        <div class="ac-price" style="font-size:0.8rem;">AED ${a.avg.toLocaleString()}</div>
+        <div class="ac-badge" style="background:${a.bc};color:${a.tc};border:1px solid ${a.tc}33;">${a.badge}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderIntelFeed() {
+  const el = document.getElementById('intelFeed');
+  el.innerHTML = INTEL_FEED.map(i => `
+    <div class="intel-item">
+      <div class="ii-icon" style="background:${i.ic};border-color:${i.ib};">${i.icon}</div>
+      <div>
+        <div class="ii-headline">${i.headline}</div>
+        <div class="ii-meta">
+          <span class="ii-tag" style="background:${i.tc}22;color:${i.tc};border:1px solid ${i.tc}33;">${i.tag}</span>
+          <span>${i.source}</span>
+          <span>${i.time}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderDupes() {
+  const el = document.getElementById('dupesPanel');
+  el.innerHTML = DUPES.map(d => `
+    <div style="background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.18);border-radius:4px;padding:0.6rem 0.7rem;margin-bottom:0.4rem;cursor:pointer;">
+      <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:3px;">
+        <span style="background:var(--amber);color:#000;font-size:0.52rem;font-weight:700;padding:1px 5px;border-radius:2px;">${d.badge}</span>
+        <span style="font-size:0.6rem;color:var(--amber);">${d.flag}</span>
+      </div>
+      <div style="font-size:0.62rem;color:var(--text2);line-height:1.4;">${d.body}</div>
+    </div>`).join('');
+}
+
+function renderDLD() {
+  const el = document.getElementById('dldFeed');
+  el.innerHTML = DLD_FEED.map(d => `
+    <div class="dld-item">
+      <div class="dld-accent" style="background:${d.c};"></div>
+      <div>
+        <div class="dld-area">${d.area}</div>
+        <div class="dld-type">${d.type}</div>
+      </div>
+      <div>
+        <div class="dld-price">${d.price}</div>
+        <div class="dld-time">${d.time}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderTrends() {
+  const el = document.getElementById('trendPanel');
+  el.innerHTML = SEARCH_TRENDS.map((t,i) => `
+    <div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid var(--border2);">
+      <span style="font-size:0.56rem;color:var(--text3);width:14px;text-align:right;">${i+1}</span>
+      <span style="font-size:0.63rem;color:var(--text);flex:1;">${t.term}</span>
+      <div style="width:50px;height:3px;background:var(--panel2);border-radius:2px;overflow:hidden;">
+        <div style="width:${t.vol}%;height:100%;background:var(--blue);opacity:0.7;border-radius:2px;"></div>
+      </div>
+      <span style="font-size:0.56rem;color:var(--blue);width:24px;text-align:right;">${t.vol}</span>
+    </div>`).join('');
+}
+
+function renderMacro() {
+  const el = document.getElementById('macroPanel');
+  el.innerHTML = MACRO.map(m => `
+    <div style="display:flex;justify-content:space-between;padding:0.32rem 0;border-bottom:1px solid var(--border2);">
+      <span style="font-size:0.6rem;color:var(--text2);">${m.label}</span>
+      <span style="font-size:0.62rem;color:${m.c};font-weight:500;">${m.val}</span>
+    </div>`).join('');
+}
+
+function renderYieldBars() {
+  const el = document.getElementById('yieldBars');
+  if (!el) return;
+  el.innerHTML = YIELDS.map(y => `
+    <div class="yb-item">
+      <div class="yb-meta">
+        <span class="yb-name">${y.area}</span>
+        <span class="yb-val">${y.yield}%</span>
+      </div>
+      <div class="yb-track">
+        <div class="yb-fill" style="width:${(y.yield/10)*100}%"></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderTicker() {
+  const el = document.getElementById('ticker');
+  const items = [...TICKER_ITEMS,...TICKER_ITEMS];
+  el.innerHTML = items.map(t =>
+    `<div class="ti"><span class="tl">[${t.l}]</span><span class="${t.cls}">${t.t}</span></div>`
+  ).join('');
+}
+
+function renderWidgets() {
+  const bar = document.getElementById('widgetBar');
+  bar.innerHTML = WIDGETS.map(w => `
+    <button class="wtog ${activeWidgets.includes(w.id)?'on':''}" 
+      onclick="toggleWidget('${w.id}',this)">${w.label}</button>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════
+// WIDGET TOGGLE
+// ═══════════════════════════════════════════════════
+function toggleWidget(id, btn) {
+  const el = document.getElementById('w-'+id);
+  if (!el) return;
+  if (activeWidgets.includes(id)) {
+    activeWidgets = activeWidgets.filter(w => w !== id);
+    el.style.display = 'none';
+    btn.classList.remove('on');
+  } else {
+    activeWidgets.push(id);
+    el.style.display = '';
+    btn.classList.add('on');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════
+function handleSearch(val) {
+  const r = document.getElementById('searchResults');
+  const v = val.toLowerCase();
+  let suggestions = SEARCH_SUGGESTIONS.default;
+  if (v.includes('jvc') || v.includes('jumeirah village')) suggestions = SEARCH_SUGGESTIONS.jvc;
+  if (v.includes('marina')) suggestions = SEARCH_SUGGESTIONS.marina;
+
+  if (val.length === 0) { r.classList.remove('show'); return; }
+  r.classList.add('show');
+  r.innerHTML = suggestions.map(s => `
+    <div class="sr-item" onclick="selectSearch('${s.text}')">
+      <span class="sr-icon">${s.icon}</span>
+      <span class="sr-text">${s.text}</span>
+      <span class="sr-tag">${s.tag}</span>
+    </div>`).join('');
+}
+function showSearch(){
+  if(document.getElementById('searchInput').value.length > 0)
+    document.getElementById('searchResults').classList.add('show');
+}
+function hideSearch(){setTimeout(()=>document.getElementById('searchResults').classList.remove('show'),200);}
+function selectSearch(text){
+  document.getElementById('searchInput').value = text;
+  document.getElementById('searchResults').classList.remove('show');
+  showToast('🔍 Searching...', text);
+}
+
+// ═══════════════════════════════════════════════════
+// MAP LAYERS
+// ═══════════════════════════════════════════════════
+function toggleLayer(btn, layer) {
+  btn.classList.toggle('active');
+  showToast('🗺 Layer Toggle', `${layer.charAt(0).toUpperCase()+layer.slice(1)} layer ${btn.classList.contains('active')?'enabled':'disabled'}`);
+}
+function setTime(btn, t) {
+  document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+function setTab(btn, tab) {
+  document.querySelectorAll('.htab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  showToast('📌 '+tab.charAt(0).toUpperCase()+tab.slice(1), 'Section activated');
+}
+
+// ═══════════════════════════════════════════════════
+// ALERT FORM
+// ═══════════════════════════════════════════════════
+function toggleChannel(ch) {
+  alertChannel = ch;
+  ['WA','EM','BOTH'].forEach(c => {
+    document.getElementById('ch'+c).classList.toggle('active', c===ch);
+  });
+  const row = document.getElementById('contactRow');
+  const lbl = row.querySelector('.af-label');
+  const inp = document.getElementById('alertContact');
+  if(ch==='WA'){lbl.textContent='WhatsApp Number';inp.placeholder='+971501234567';}
+  else if(ch==='EM'){lbl.textContent='Email Address';inp.placeholder='you@example.com';}
+  else{lbl.textContent='WhatsApp & Email';inp.placeholder='+971501234567 or email';}
+}
+
+function submitAlert() {
+  const name = document.getElementById('alertName').value;
+  const area = document.getElementById('alertArea').value;
+  const type = document.getElementById('alertType').value;
+  const min = document.getElementById('alertMin').value;
+  const max = document.getElementById('alertMax').value;
+  const contact = document.getElementById('alertContact').value;
+
+  if(!name||!contact){
+    showToast('⚠️ Missing Info','Please enter your name and contact details');
+    return;
+  }
+  showToast('🤖 Alert Bot Activated!',`Watching ${area} · ${type} · AED ${min||'any'}–${max||'any'} · Alerts via ${alertChannel==='WA'?'WhatsApp':alertChannel==='EM'?'Email':'WhatsApp & Email'}`);
+}
+
+// ═══════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════
+let toastTimer;
+function showToast(title, msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastTitle').textContent = title;
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+// ═══════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════
+Chart.defaults.color='#3a4a5a';
+Chart.defaults.font.family="'JetBrains Mono',monospace";
+Chart.defaults.font.size=9;
+
+const months=['Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb'];
+
+const c1ctx=document.getElementById('chart1').getContext('2d');
+const g1=c1ctx.createLinearGradient(0,0,0,130);
+g1.addColorStop(0,'rgba(0,210,120,0.2)');g1.addColorStop(1,'rgba(0,210,120,0)');
+new Chart(c1ctx,{
+  type:'line',
+  data:{
+    labels:months,
+    datasets:[
+      {label:'1BR',data:[72,73.5,74.2,75.8,78,80,79.5,81.2,83,84.5,86,87.2],
+       borderColor:'#00d278',backgroundColor:g1,borderWidth:1.5,pointRadius:0,fill:true,tension:0.4},
+      {label:'2BR',data:[105,107,108.5,111,114,117,116.5,119,121.5,123,125,127.4],
+       borderColor:'#38bdf8',backgroundColor:'transparent',borderWidth:1,pointRadius:0,fill:false,tension:0.4,borderDash:[3,3]},
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{
+      backgroundColor:'rgba(4,6,8,0.95)',borderColor:'rgba(0,210,120,0.3)',borderWidth:1,
+      padding:8,titleColor:'#00d278',bodyColor:'#d4dde8',
+      callbacks:{label:c=>` AED ${c.raw}k/yr`}
+    }},
+    scales:{
+      x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#3a4a5a'},border:{display:false}},
+      y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#3a4a5a',callback:v=>v+'k'},border:{display:false}}
+    }
+  }
+});
+
+const c2ctx=document.getElementById('chart2').getContext('2d');
+new Chart(c2ctx,{
+  type:'bar',
+  data:{
+    labels:months,
+    datasets:[
+      {label:'Listings',data:[3800,3650,3500,3700,3900,4100,3800,3600,3400,3300,3200,3100],
+       backgroundColor:'rgba(167,139,250,0.25)',borderColor:'#a78bfa',borderWidth:1},
+      {label:'Enquiries',data:[3200,3400,3600,3800,4200,4600,4400,4800,5100,5300,5500,5700],
+       type:'line',borderColor:'#f59e0b',backgroundColor:'transparent',
+       borderWidth:1.5,pointRadius:0,tension:0.4},
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{
+      backgroundColor:'rgba(4,6,8,0.95)',borderColor:'rgba(0,210,120,0.3)',borderWidth:1,padding:8,
+    }},
+    scales:{
+      x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#3a4a5a'},border:{display:false}},
+      y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#3a4a5a'},border:{display:false}}
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════════
+// CLOCK & LIVE UPDATES
+// ═══════════════════════════════════════════════════
+function clock(){
+  const n=new Date();
+  document.getElementById('clock').textContent=
+    n.toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'})+' GST';
+}
+clock();setInterval(clock,1000);
+
+let sec=0;
+setInterval(()=>{
+  sec++;
+  const el=document.getElementById('updateTime');
+  el.textContent=sec<60?sec+'s ago':Math.floor(sec/60)+'m ago';
+  if(sec>300){sec=0;}
+
+  // Flash random signal
+  const cells=document.querySelectorAll('.sig-cell');
+  if(cells.length){
+    const c=cells[Math.floor(Math.random()*cells.length)];
+    c.style.background='rgba(0,210,120,0.1)';
+    setTimeout(()=>c.style.background='',600);
+  }
+
+  // Simulate listing count change
+  if(sec%60===0){
+    const count=parseInt(document.getElementById('listingCount').textContent.replace(',',''));
+    document.getElementById('listingCount').textContent=(count+Math.floor(Math.random()*5+1)).toLocaleString();
+  }
+},1000);
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+renderTicker();
+renderWidgets();
+renderSignals();
+renderMode1();
+renderMapPins();
+renderMomentum();
+renderSources();
+renderOffplan();
+renderRenterAreas();
+renderIntelFeed();
+renderDupes();
+renderDLD();
+renderTrends();
+renderMacro();
+renderYieldBars();
+
+// Welcome
+setTimeout(()=>showToast('🏠 Renter Mode Active','Switch to Investor Mode for yield & ROI intelligence'),1000);
+</script>
+</body>
+</html>
